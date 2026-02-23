@@ -105,11 +105,12 @@ flutter run
 | Nama | GitHub | Peran |
 | :--- | :--- | :--- |
 | Malakul Kabir Ar Rabbani | [@vexeeldev](https://github.com/vexeeldev) | Project Leader |
-| Ahmad Syauqi Al-Farisi | [@Syauqi-men](https://github.com/Syauqi-men) — | - |
-| Ahmad Fikri Ramadhan | [@AhmadFikri17](https://github.com/AhmadFikri17) — | - |
+| Ahmad Syauqi Al-Farisi | [@Syauqi-men](https://github.com/Syauqi-men) | - |
+| Ahmad Fikri Ramadhan | [@AhmadFikri17](https://github.com/AhmadFikri17)  | - |
 
 ---
 
 <p align="center">
   Glaucoma Detection Project — PENS PSDKU Lamongan 2026 🎓
 </p>
+
