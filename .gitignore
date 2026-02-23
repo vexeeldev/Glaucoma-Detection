@@ -1,0 +1,42 @@
+# Dependencies
+**/node_modules/
+**/vendor/
+**/venv/
+
+# Laravel Specific
+backend/.env
+backend/storage/*.php
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/.phpunit.result.cache
+
+# React / Vite Specific
+frontend/dist/
+frontend/.env*
+
+# Flutter Specific
+mobile/.dart_tool/
+mobile/build/
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/android/.gradle/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Swap files
+*.swp
+*.swo
+
+# --- Python (AI Service) ---
+ai-service/venv/
+ai-service/__pycache__/
+ai-service/*.pyc
+ai-service/.env
+ai-service/*.h5
+ai-service/*.pkl
+ai-service/*.onnx
