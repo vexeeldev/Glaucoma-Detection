@@ -1,0 +1,267 @@
+CREATE TABLE users (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    role ENUM('patient','doctor','admin') DEFAULT 'patient',
+    is_active BOOLEAN DEFAULT TRUE,
+    email_verified_at TIMESTAMP NULL,
+    remember_token VARCHAR(100),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP NULL
+);
+
+CREATE TABLE password_reset_tokens (
+    email VARCHAR(150) PRIMARY KEY,
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NULL
+);
+
+CREATE TABLE personal_access_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tokenable_type VARCHAR(255) NOT NULL,
+    tokenable_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    abilities TEXT,
+    last_used_at TIMESTAMP NULL,
+    expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+CREATE TABLE specializations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+CREATE TABLE patients (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT UNIQUE NOT NULL,
+    date_of_birth DATE,
+    gender ENUM('male','female'),
+    address TEXT,
+    city VARCHAR(80),
+    province VARCHAR(80),
+    postal_code VARCHAR(10),
+    emergency_contact_name VARCHAR(100),
+    emergency_contact_phone VARCHAR(20),
+    emergency_contact_relation VARCHAR(50),
+    blood_type VARCHAR(5),
+    medical_history TEXT,
+    current_medications TEXT,
+    allergies TEXT,
+    insurance_provider VARCHAR(100),
+    insurance_number VARCHAR(50),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE doctors (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT UNIQUE NOT NULL,
+    specialization_id BIGINT,
+    license_number VARCHAR(50) UNIQUE NOT NULL,
+    practice_location VARCHAR(200),
+    experience_years INT DEFAULT 0,
+    bio TEXT,
+    profile_photo VARCHAR(500),
+    consultation_fee DECIMAL(12,2) DEFAULT 0,
+    is_available BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (specialization_id) REFERENCES specializations(id) ON DELETE SET NULL
+);
+
+CREATE TABLE admins (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT UNIQUE NOT NULL,
+    admin_level VARCHAR(30) DEFAULT 'staff',
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE doctor_schedules (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    doctor_id BIGINT NOT NULL,
+    day_of_week ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday'),
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    is_available BOOLEAN DEFAULT TRUE,
+    max_patients INT DEFAULT 10,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    UNIQUE KEY unique_doctor_day (doctor_id, day_of_week),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+);
+
+CREATE TABLE appointments (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    patient_id BIGINT NOT NULL,
+    doctor_id BIGINT NOT NULL,
+    appointment_date DATE NOT NULL,
+    appointment_time TIME NOT NULL,
+    appointment_status ENUM('pending_payment','pending_confirmation','confirmed','rejected','completed','cancelled') DEFAULT 'pending_payment',
+    patient_complaint TEXT,
+    doctor_notes TEXT,
+    rejection_reason VARCHAR(255),
+    confirmed_by BIGINT NULL,
+    confirmed_at TIMESTAMP NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
+    FOREIGN KEY (confirmed_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE payments (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    appointment_id BIGINT UNIQUE NOT NULL,
+    invoice_number VARCHAR(50) UNIQUE NOT NULL,
+    amount DECIMAL(12,2) DEFAULT 0,
+    payment_status ENUM('unpaid','paid','failed','refunded') DEFAULT 'unpaid',
+    payment_method ENUM('bank_transfer','virtual_account','dummy') DEFAULT 'dummy',
+    transaction_id VARCHAR(100),
+    payment_proof TEXT,
+    paid_at TIMESTAMP NULL,
+    expired_at TIMESTAMP NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE
+);
+
+CREATE TABLE examinations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    appointment_id BIGINT UNIQUE NOT NULL,
+    patient_id BIGINT NOT NULL,
+    doctor_id BIGINT NOT NULL,
+    examination_code VARCHAR(30) UNIQUE NOT NULL,
+    examination_date DATE NOT NULL,
+    examination_time TIME,
+    status ENUM('pending','image_uploaded','processing','completed','failed') DEFAULT 'pending',
+    clinical_notes TEXT,
+    doctor_diagnosis TEXT,
+    recommendation TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+);
+
+CREATE TABLE fundus_images (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    examination_id BIGINT NOT NULL,
+    uploaded_by BIGINT NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    stored_filename VARCHAR(255) UNIQUE NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_url VARCHAR(500),
+    file_format ENUM('jpg','jpeg','png') DEFAULT 'jpg',
+    file_size_bytes BIGINT,
+    image_width_px INT,
+    image_height_px INT,
+    eye_side ENUM('left','right','both') DEFAULT 'right',
+    device_name VARCHAR(100),
+    device_model VARCHAR(100),
+    capture_notes TEXT,
+    is_valid BOOLEAN DEFAULT TRUE,
+    invalid_reason TEXT,
+    captured_at TIMESTAMP NULL,
+    uploaded_at TIMESTAMP NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    FOREIGN KEY (examination_id) REFERENCES examinations(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE ml_model_versions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    version_name VARCHAR(30) UNIQUE NOT NULL,
+    architecture VARCHAR(50),
+    model_file_path VARCHAR(500),
+    dataset_used VARCHAR(200),
+    accuracy DECIMAL(5,4),
+    sensitivity DECIMAL(5,4),
+    specificity DECIMAL(5,4),
+    auc_roc DECIMAL(5,4),
+    f1_score DECIMAL(5,4),
+    precision DECIMAL(5,4),
+    total_training_data INT,
+    total_validation_data INT,
+    is_active BOOLEAN DEFAULT FALSE,
+    description TEXT,
+    changelog TEXT,
+    deployed_at TIMESTAMP NULL,
+    deployed_by BIGINT NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    FOREIGN KEY (deployed_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE analysis_results (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    examination_id BIGINT NOT NULL,
+    fundus_image_id BIGINT NOT NULL,
+    model_version_id BIGINT NOT NULL,
+    prediction ENUM('glaucoma','normal'),
+    confidence_score DECIMAL(5,4),
+    glaucoma_probability DECIMAL(5,4),
+    normal_probability DECIMAL(5,4),
+    heatmap_image_path VARCHAR(500),
+    raw_output JSON,
+    status ENUM('queued','processing','completed','failed') DEFAULT 'queued',
+    error_message VARCHAR(500),
+    processing_time_ms INT,
+    analyzed_at TIMESTAMP NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    FOREIGN KEY (examination_id) REFERENCES examinations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fundus_image_id) REFERENCES fundus_images(id) ON DELETE CASCADE,
+    FOREIGN KEY (model_version_id) REFERENCES ml_model_versions(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE notifications (
+    id CHAR(36) PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    type ENUM('appointment_created','appointment_confirmed','appointment_rejected','payment_confirmed','examination_completed','analysis_ready','system') DEFAULT 'system',
+    channel ENUM('push','email','sms') DEFAULT 'push',
+    is_read BOOLEAN DEFAULT FALSE,
+    data JSON,
+    read_at TIMESTAMP NULL,
+    sent_at TIMESTAMP NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE activity_logs (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NULL,
+    action VARCHAR(100) NOT NULL,
+    module VARCHAR(50) NOT NULL,
+    description TEXT,
+    subject_type VARCHAR(100),
+    subject_id BIGINT,
+    old_data JSON,
+    new_data JSON,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);

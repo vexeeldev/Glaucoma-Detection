@@ -1,0 +1,217 @@
+erDiagram
+
+    USERS {
+        bigint id PK
+        varchar name
+        varchar email
+        varchar password
+        varchar phone
+        enum role "patient|doctor|admin"
+        boolean is_active
+        timestamp email_verified_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    PATIENTS {
+        bigint id PK
+        bigint user_id FK
+        date date_of_birth
+        enum gender "male|female"
+        text address
+        varchar city
+        varchar province
+        varchar postal_code
+        varchar emergency_contact
+        varchar blood_type
+        text medical_history
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    DOCTORS {
+        bigint id PK
+        bigint user_id FK
+        bigint specialization_id FK
+        varchar license_number
+        varchar practice_location
+        int experience_years
+        text bio
+        varchar profile_photo
+        boolean is_available
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SPECIALIZATIONS {
+        bigint id PK
+        varchar name
+        text description
+        timestamp created_at
+    }
+
+    ADMINS {
+        bigint id PK
+        bigint user_id FK
+        varchar admin_level
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    DOCTOR_SCHEDULES {
+        bigint id PK
+        bigint doctor_id FK
+        enum day_of_week "mon|tue|wed|thu|fri|sat|sun"
+        time start_time
+        time end_time
+        boolean is_available
+        timestamp created_at
+    }
+
+    APPOINTMENTS {
+        bigint id PK
+        bigint patient_id FK
+        bigint doctor_id FK
+        date appointment_date
+        time appointment_time
+        enum appointment_status "pending_payment|pending_confirmation|confirmed|rejected|completed|cancelled"
+        text patient_complaint
+        text doctor_notes
+        varchar rejection_reason
+        bigint confirmed_by FK
+        timestamp confirmed_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    PAYMENTS {
+        bigint id PK
+        bigint appointment_id FK
+        varchar invoice_number
+        decimal amount
+        enum payment_status "unpaid|paid|failed|refunded"
+        enum payment_method "bank_transfer|virtual_account|dummy"
+        varchar transaction_id
+        text payment_proof
+        timestamp paid_at
+        timestamp expired_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    EXAMINATIONS {
+        bigint id PK
+        bigint appointment_id FK
+        bigint patient_id FK
+        bigint doctor_id FK
+        varchar examination_code
+        date examination_date
+        time examination_time
+        enum status "pending|image_uploaded|processing|completed|failed"
+        text clinical_notes
+        text doctor_diagnosis
+        text recommendation
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    FUNDUS_IMAGES {
+        bigint id PK
+        bigint examination_id FK
+        bigint uploaded_by FK
+        varchar original_filename
+        varchar stored_filename
+        varchar file_path
+        varchar file_url
+        enum file_format "jpg|png|jpeg"
+        bigint file_size_bytes
+        int image_width_px
+        int image_height_px
+        enum eye_side "left|right|both"
+        varchar device_name
+        text capture_notes
+        boolean is_valid
+        timestamp captured_at
+        timestamp uploaded_at
+    }
+
+    ML_MODEL_VERSIONS {
+        bigint id PK
+        varchar version_name
+        varchar model_file_path
+        varchar architecture "CNN|EfficientNet|ResNet|VGG"
+        varchar dataset_used
+        decimal accuracy
+        decimal sensitivity
+        decimal specificity
+        decimal auc_roc
+        int total_training_data
+        boolean is_active
+        text description
+        timestamp deployed_at
+        timestamp created_at
+    }
+
+    ANALYSIS_RESULTS {
+        bigint id PK
+        bigint examination_id FK
+        bigint fundus_image_id FK
+        bigint model_version_id FK
+        enum prediction "glaucoma|normal"
+        decimal confidence_score
+        decimal glaucoma_probability
+        decimal normal_probability
+        text heatmap_image_path
+        json raw_output
+        enum status "queued|processing|completed|failed"
+        varchar error_message
+        int processing_time_ms
+        timestamp analyzed_at
+        timestamp created_at
+    }
+
+    NOTIFICATIONS {
+        bigint id PK
+        bigint user_id FK
+        varchar title
+        text message
+        enum type "appointment|payment|examination|result|system"
+        enum channel "push|email|sms"
+        boolean is_read
+        json data
+        timestamp read_at
+        timestamp sent_at
+        timestamp created_at
+    }
+
+    ACTIVITY_LOGS {
+        bigint id PK
+        bigint user_id FK
+        varchar action
+        varchar module
+        text description
+        varchar ip_address
+        varchar user_agent
+        json old_data
+        json new_data
+        timestamp created_at
+    }
+
+    %% RELATIONSHIPS
+    USERS ||--o| PATIENTS : "has profile"
+    USERS ||--o| DOCTORS : "has profile"
+    USERS ||--o| ADMINS : "has profile"
+    SPECIALIZATIONS ||--o{ DOCTORS : "categorizes"
+    DOCTORS ||--o{ DOCTOR_SCHEDULES : "has schedules"
+    PATIENTS ||--o{ APPOINTMENTS : "books"
+    DOCTORS ||--o{ APPOINTMENTS : "receives"
+    USERS ||--o{ APPOINTMENTS : "confirms (admin/doctor)"
+    APPOINTMENTS ||--|| PAYMENTS : "has payment"
+    APPOINTMENTS ||--o| EXAMINATIONS : "leads to"
+    EXAMINATIONS ||--o{ FUNDUS_IMAGES : "contains"
+    EXAMINATIONS ||--o{ ANALYSIS_RESULTS : "produces"
+    FUNDUS_IMAGES ||--o{ ANALYSIS_RESULTS : "analyzed by"
+    ML_MODEL_VERSIONS ||--o{ ANALYSIS_RESULTS : "used in"
+    USERS ||--o{ FUNDUS_IMAGES : "uploads"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    USERS ||--o{ ACTIVITY_LOGS : "generates"

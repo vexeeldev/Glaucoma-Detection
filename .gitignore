@@ -40,3 +40,10 @@ ai-service/.env
 ai-service/*.h5
 ai-service/*.pkl
 ai-service/*.onnx
+ai-service/eyepac-light-v2-512-jpg/
+ai-service/eyepac-light-v2-512-jpg/test/
+ai-service/eyepac-light-v2-512-jpg/train/
+ai-service/eyepac-light-v2-512-jpg/validation/
+ai-service/dataset_glaucoma.zip
+*.zip
+dataset/
