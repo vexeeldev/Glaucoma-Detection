@@ -1,0 +1,141 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "password": "password123",
+      "role": "pasien",
+      "phoneNumber": "081234567890",
+      "address": "Jl. Contoh No. 123, Jakarta",
+      "bloodType": "O",
+      "medicalHistory": "Hipertensi",
+      "allergies": "Debu, Udang",
+      "insuranceName": "BPJS Kesehatan",
+      "insurancePolicyNumber": "1234567890"
+    },
+    {
+      "id": "2",
+      "name": "Sarah Wijaya",
+      "email": "sarah@eyecare.com",
+      "password": "doctor123",
+      "role": "dokter",
+      "phoneNumber": "081298765432",
+      "address": "Jl. Dokter No. 45, Jakarta"
+    }
+  ],
+  "doctors": [
+    {
+      "id": "2",
+      "name": "Dr. Sarah Wijaya, Sp.M",
+      "specialization": "Spesialis Mata",
+      "photoUrl": "assets/images/doctor1.jpg",
+      "schedule": "Senin-Jumat, 09:00-17:00",
+      "availableQuota": 10,
+      "isAvailable": true,
+      "about": "Dokter spesialis mata dengan pengalaman 10 tahun. Lulusan Universitas Indonesia.",
+      "experience": 10,
+      "education": "Spesialis Mata - Universitas Indonesia",
+      "hospital": "RS Mata Jakarta",
+      "rating": 4.8,
+      "totalPatients": 1250
+    },
+    {
+      "id": "3",
+      "name": "Dr. Budi Santoso, Sp.M(K)",
+      "specialization": "Glaukoma Specialist",
+      "photoUrl": "assets/images/doctor2.jpg",
+      "schedule": "Selasa-Kamis, 10:00-18:00",
+      "availableQuota": 5,
+      "isAvailable": true,
+      "about": "Spesialis glaukoma dengan fellowship di Jepang. Aktif dalam penelitian glaukoma.",
+      "experience": 8,
+      "education": "Spesialis Mata - Universitas Airlangga, Fellowship Glaukoma - Tokyo University",
+      "hospital": "RS Mata Surabaya",
+      "rating": 4.9,
+      "totalPatients": 850
+    }
+  ],
+  "appointments": [
+    {
+      "id": "1",
+      "patientId": "1",
+      "doctorId": "2",
+      "doctorName": "Dr. Sarah Wijaya, Sp.M",
+      "date": "2024-02-01T10:00:00",
+      "time": "10:00",
+      "complaint": "Mata terasa pedas dan berair sejak 3 hari terakhir",
+      "status": "completed",
+      "paymentMethod": "Transfer Bank",
+      "createdAt": "2024-01-25T08:30:00"
+    },
+    {
+      "id": "2",
+      "patientId": "1",
+      "doctorId": "2",
+      "doctorName": "Dr. Sarah Wijaya, Sp.M",
+      "date": "2024-02-15T14:00:00",
+      "time": "14:00",
+      "complaint": "Pemeriksaan rutin glaukoma",
+      "status": "confirmed",
+      "paymentMethod": "E-Wallet",
+      "createdAt": "2024-02-01T09:15:00"
+    },
+    {
+      "id": "3",
+      "patientId": "1",
+      "doctorId": "3",
+      "doctorName": "Dr. Budi Santoso, Sp.M(K)",
+      "date": "2024-02-20T09:00:00",
+      "time": "09:00",
+      "complaint": "Keluhan mata buram sebelah kiri",
+      "status": "paid",
+      "paymentMethod": "Transfer Bank",
+      "createdAt": "2024-02-05T14:20:00"
+    }
+  ],
+  "examinations": [
+    {
+      "id": "1",
+      "appointmentId": "1",
+      "patientId": "1",
+      "patientName": "John Doe",
+      "doctorId": "2",
+      "doctorName": "Dr. Sarah Wijaya, Sp.M",
+      "examinationDate": "2024-02-01T10:30:00",
+      "fundusPhotoUrl": "assets/images/fundus1.jpg",
+      "prediction": "Normal",
+      "confidenceScore": 0.95,
+      "gradCamHeatmap": "assets/images/heatmap1.jpg",
+      "doctorDiagnosis": "Mata sehat, tidak ditemukan tanda-tanda glaukoma. Kondisi mata normal.",
+      "doctorRecommendation": "Pemeriksaan rutin 6 bulan sekali. Gunakan kacamata anti radiasi jika bekerja di depan komputer.",
+      "status": "completed"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "1",
+      "userId": "1",
+      "title": "Janji Dikonfirmasi",
+      "message": "Janji Anda dengan Dr. Sarah Wijaya, Sp.M telah dikonfirmasi",
+      "type": "appointment_confirmed",
+      "isRead": false,
+      "createdAt": "2024-02-01T11:00:00",
+      "data": {
+        "appointmentId": "2"
+      }
+    },
+    {
+      "id": "2",
+      "userId": "2",
+      "title": "Janji Baru",
+      "message": "Ada janji baru dari John Doe",
+      "type": "new_appointment",
+      "isRead": true,
+      "createdAt": "2024-02-05T14:20:00",
+      "data": {
+        "appointmentId": "3"
+      }
+    }
+  ]
+}
