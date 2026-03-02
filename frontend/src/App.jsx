@@ -1,13 +1,9 @@
-import { useState } from 'react';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-/* ===== ADMIN ===== */
-import MainLayout from './admin/Layouts/MainLayout';
+/* ===== IMPORT COMPONENT & PAGES ===== */
+import Login from './auth/Login';
+import MainLayout from './admin/Layouts/MainLayouts';
 import DashboardPage from './admin/pages/DashboardPage';
 import UserPage from './admin/pages/UserPage';
 import DoctorPage from './admin/pages/DoctorPage';
@@ -16,34 +12,52 @@ import ExaminationPage from './admin/pages/ExaminationPage';
 import MLModelPage from './admin/pages/MLModelPage';
 import ActivityLogPage from './admin/pages/ActivityLogPage';
 
-/* ===== LABS ===== */
 import Layout from './labs/components/Layout';
 import Dashboard from './labs/pages/Dashboard';
 import Examination from './labs/pages/Examination';
 import History from './labs/pages/History';
 
-// ===== LOGIN =====
-import Login from './auth/Login';
-
+// Komponen Proteksi Route
 const ProtectedRoute = ({ isLoggedIn, children }) => {
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   return children;
 };
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Ambil status login dari localStorage (biar gak hilang pas refresh)
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    localStorage.getItem('isLoggedIn') === 'true'
+  );
+  const [userRole, setUserRole] = useState(
+    localStorage.getItem('userRole') || null
+  );
+
+  const handleLogin = (role) => {
+    setIsLoggedIn(true);
+    setUserRole(role);
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('userRole', role);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserRole(null);
+    localStorage.clear(); // Hapus data login
+  };
 
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* Login (shared) */}
+        {/* HALAMAN LOGIN */}
         <Route
           path="/login"
           element={
-            isLoggedIn
-              ? <Navigate to="/admin/dashboard" replace />
-              : <Login onLogin={() => setIsLoggedIn(true)} />
+            isLoggedIn ? (
+              // Jika sudah login, lempar ke dashboard sesuai role masing-masing
+              <Navigate to={userRole === 'admin' ? "/admin/dashboard" : "/labs/dashboard"} replace />
+            ) : (
+              <Login onLogin={handleLogin} />
+            )
           }
         />
 
@@ -52,10 +66,12 @@ export default function App() {
           path="/admin"
           element={
             <ProtectedRoute isLoggedIn={isLoggedIn}>
-              <MainLayout onLogout={() => setIsLoggedIn(false)} />
+              <MainLayout onLogout={handleLogout} />
             </ProtectedRoute>
           }
         >
+          {/* Default path untuk /admin adalah dashboard */}
+          <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="users" element={<UserPage />} />
           <Route path="doctors" element={<DoctorPage />} />
@@ -70,17 +86,18 @@ export default function App() {
           path="/labs"
           element={
             <ProtectedRoute isLoggedIn={isLoggedIn}>
-              <Layout />
+              <Layout onLogout={handleLogout} />
             </ProtectedRoute>
           }
         >
+          <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="pemeriksaan" element={<Examination />} />
           <Route path="riwayat" element={<History />} />
         </Route>
 
+        {/* CATCH ALL */}
         <Route path="*" element={<Navigate to="/login" replace />} />
-
       </Routes>
     </BrowserRouter>
   );

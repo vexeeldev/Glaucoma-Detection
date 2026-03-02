@@ -1,3 +1,5 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -10,17 +12,19 @@ import {
   Eye,
 } from 'lucide-react';
 
+// Pastikan path di sini sesuai dengan yang ada di App.jsx kamu
 export const MENU_ITEMS = [
-  { id: 'dashboard',    label: 'Dashboard',               icon: LayoutDashboard },
-  { id: 'users',        label: 'Manajemen User',           icon: Users },
-  { id: 'doctors',      label: 'Manajemen Dokter',         icon: Stethoscope },
-  { id: 'appointments', label: 'Manajemen Appointment',    icon: Calendar },
-  { id: 'examinations', label: 'Manajemen Pemeriksaan',    icon: Microscope },
-  { id: 'ml',           label: 'ML Model',                 icon: Cpu },
-  { id: 'logs',         label: 'Activity Log',             icon: ClipboardList },
+  { id: 'dashboard',    label: 'Dashboard',             path: '/admin/dashboard',    icon: LayoutDashboard },
+  { id: 'users',        label: 'Manajemen User',         path: '/admin/users',        icon: Users },
+  { id: 'doctors',      label: 'Manajemen Dokter',       path: '/admin/doctors',      icon: Stethoscope },
+  { id: 'appointments', label: 'Manajemen Appointment',  path: '/admin/appointments', icon: Calendar },
+  { id: 'examinations', label: 'Manajemen Pemeriksaan',  path: '/admin/examinations', icon: Microscope },
+  { id: 'ml',           label: 'ML Model',               path: '/admin/ml',           icon: Cpu },
+  { id: 'logs',         label: 'Activity Log',           path: '/admin/logs',         icon: ClipboardList },
 ];
 
-const Sidebar = ({ activeMenu, setMenu, onLogout }) => (
+// Hapus 'activeMenu' dan 'setMenu' dari parameter props di bawah ini
+const Sidebar = ({ onLogout }) => (
   <div className="w-[240px] bg-[#1565C0] text-white flex flex-col fixed h-screen z-40">
     {/* Logo */}
     <div className="p-8">
@@ -34,27 +38,33 @@ const Sidebar = ({ activeMenu, setMenu, onLogout }) => (
     </div>
 
     {/* Navigation */}
-    <nav className="flex-1 px-4 py-4 space-y-1">
+    <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
       {MENU_ITEMS.map((item) => (
-        <button
+        <NavLink
           key={item.id}
-          onClick={() => setMenu(item.id)}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-sm ${
-            activeMenu === item.id
-              ? 'bg-white text-[#1565C0] shadow-lg shadow-black/10 scale-105'
-              : 'text-blue-100 hover:bg-white/10'
-          }`}
+          to={item.path}
+          // Fungsi onClick={() => setMenu(...)} SUDAH DIHAPUS agar tidak error
+          className={({ isActive }) => `
+            w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-sm
+            ${isActive 
+              ? 'bg-white text-[#1565C0] shadow-lg shadow-black/10 scale-105' 
+              : 'text-blue-100 hover:bg-white/10'}
+          `}
         >
-          <item.icon size={20} strokeWidth={activeMenu === item.id ? 2.5 : 2} />
-          {item.label}
-        </button>
+          {({ isActive }) => (
+            <>
+              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              {item.label}
+            </>
+          )}
+        </NavLink>
       ))}
     </nav>
 
     {/* User info + Logout */}
     <div className="p-4 border-t border-white/10 space-y-2">
       <div className="bg-white/10 p-4 rounded-2xl flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-blue-400 flex items-center justify-center font-bold border-2 border-white/20">
+        <div className="w-10 h-10 rounded-full bg-blue-400 flex items-center justify-center font-bold border-2 border-white/20 text-xs">
           AS
         </div>
         <div>
