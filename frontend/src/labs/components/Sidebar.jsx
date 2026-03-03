@@ -2,9 +2,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, LayoutDashboard, ClipboardList, History, LogOut } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',    path: '/dashboard',   icon: LayoutDashboard },
-  { label: 'Pemeriksaan',  path: '/pemeriksaan', icon: ClipboardList },
-  { label: 'Riwayat',      path: '/riwayat',     icon: History },
+  { label: 'Dashboard',    path: '/labs/dashboard',   icon: LayoutDashboard },
+  { label: 'Pemeriksaan',  path: '/labs/pemeriksaan', icon: ClipboardList },
+  { label: 'Riwayat',      path: '/labs/riwayat',     icon: History },
 ];
 
 const Sidebar = ({ onLogout }) => {

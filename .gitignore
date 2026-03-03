@@ -2,6 +2,7 @@
 **/node_modules/
 **/vendor/
 **/venv/
+**/dataset/
 
 # Laravel Specific
 backend/.env
