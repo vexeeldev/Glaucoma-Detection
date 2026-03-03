@@ -1,35 +1,57 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
 
-function App() {
-  const [count, setCount] = useState(0)
+import Layout from './labs/components/Layout';
+import Login from './labs/pages/Login';
+import Dashboard from './labs/pages/Dashboard';
+import Examination from './labs/pages/Examination';
+import History from './labs/pages/History';
+
+// Guard: redirect ke /login jika belum autentikasi
+const ProtectedRoute = ({ isLoggedIn, children }) => {
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  return children;
+};
+
+const App = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <BrowserRouter>
+      <Routes>
+        {/* Halaman Login — redirect ke dashboard jika sudah login */}
+        <Route
+          path="/login"
+          element={
+            isLoggedIn
+              ? <Navigate to="/dashboard" replace />
+              : <Login onLogin={() => setIsLoggedIn(true)} />
+          }
+        />
 
-export default App
+        {/* Halaman yang butuh autentikasi — dibungkus Layout sebagai Outlet */}
+        <Route
+          element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <Layout onLogout={() => setIsLoggedIn(false)} />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard"    element={<Dashboard />} />
+          <Route path="/pemeriksaan"  element={<Examination />} />
+          <Route path="/riwayat"      element={<History />} />
+        </Route>
+
+        {/* Fallback — arahkan ke login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
+
+export default App;

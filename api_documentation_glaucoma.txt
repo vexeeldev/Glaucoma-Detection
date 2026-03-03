@@ -1,0 +1,621 @@
+================================================================
+  API DOCUMENTATION — GlaucoScan Backend (Laravel)
+  Base URL : http://YOUR_IP/api
+  Auth     : Bearer Token (Laravel Sanctum)
+  Versi    : 1.0.0
+================================================================
+
+KETERANGAN SIMBOL:
+  🔓 = Public (tidak perlu token)
+  🔒 = Protected (wajib pakai token)
+  👤 = Khusus role patient
+  🩺 = Khusus role doctor
+  🏥 = Khusus Web Lab (doctor)
+  ⚙️  = Khusus role admin
+  🤖 = Internal (dipanggil ML Service)
+
+FORMAT RESPONSE SUKSES:
+  {
+    "success": true,
+    "message": "...",
+    "data": { ... }
+  }
+
+FORMAT RESPONSE GAGAL:
+  {
+    "success": false,
+    "message": "...",
+    "errors": { ... }
+  }
+
+================================================================
+  1. AUTH
+================================================================
+
+🔓 POST   /auth/register
+   Deskripsi : Registrasi akun pasien baru, otomatis buat
+               profil patient kosong, langsung return token
+   Body      : name, email, password, 
+               password_confirmation, phone
+   Response  : user, token, token_type
+
+─────────────────────────────────────────────────────────────
+
+🔓 POST   /auth/login
+   Deskripsi : Login semua role (patient, doctor, admin)
+               Token lama dihapus, token baru dibuat
+   Body      : email, password
+   Response  : user, token, token_type, role
+
+─────────────────────────────────────────────────────────────
+
+🔓 POST   /auth/forgot-password
+   Deskripsi : Kirim email berisi link reset password
+               ke email yang terdaftar
+   Body      : email
+   Response  : message
+
+─────────────────────────────────────────────────────────────
+
+🔓 POST   /auth/reset-password
+   Deskripsi : Reset password menggunakan token 
+               yang dikirim ke email
+   Body      : token, email, password, 
+               password_confirmation
+   Response  : message
+
+─────────────────────────────────────────────────────────────
+
+🔒 POST   /auth/logout
+   Deskripsi : Logout, hapus token yang sedang aktif
+   Response  : message
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /auth/me
+   Deskripsi : Ambil data user yang sedang login
+               beserta relasi patient/doctor/admin
+   Response  : user + relasi sesuai role
+
+─────────────────────────────────────────────────────────────
+
+🔒 POST   /auth/change-password
+   Deskripsi : Ganti password, semua token dihapus
+               setelah berhasil (logout semua device)
+   Body      : current_password, new_password, 
+               new_password_confirmation
+   Response  : message
+
+─────────────────────────────────────────────────────────────
+
+🔒 PUT    /auth/update-profile-photo
+   Deskripsi : Upload/ganti foto profil user
+   Body      : photo (file — jpg, png, max 2MB)
+   Format    : multipart/form-data
+   Response  : url foto baru
+
+================================================================
+  2. PROFIL PASIEN
+================================================================
+
+🔒👤 GET    /patient/profile
+     Deskripsi : Lihat profil lengkap pasien yang login
+                 termasuk data pribadi, medis, asuransi
+     Response  : data patient lengkap
+
+─────────────────────────────────────────────────────────────
+
+🔒👤 PUT    /patient/profile
+     Deskripsi : Update data pribadi pasien
+     Body      : name, phone, date_of_birth, gender,
+                 address, city, province, postal_code,
+                 emergency_contact_name,
+                 emergency_contact_phone,
+                 emergency_contact_relation
+     Response  : data patient terbaru
+
+─────────────────────────────────────────────────────────────
+
+🔒👤 PUT    /patient/medical-info
+     Deskripsi : Update data medis pasien
+     Body      : blood_type, medical_history,
+                 current_medications, allergies
+     Response  : data medis terbaru
+
+─────────────────────────────────────────────────────────────
+
+🔒👤 PUT    /patient/insurance
+     Deskripsi : Update data asuransi pasien
+     Body      : insurance_provider, insurance_number
+     Response  : data asuransi terbaru
+
+================================================================
+  3. PROFIL DOKTER
+================================================================
+
+🔒🩺 GET    /doctor/profile
+     Deskripsi : Lihat profil lengkap dokter yang login
+                 beserta spesialisasi dan jadwal
+     Response  : data doctor + specialization
+
+─────────────────────────────────────────────────────────────
+
+🔒🩺 PUT    /doctor/profile
+     Deskripsi : Update profil dokter
+     Body      : bio, practice_location, 
+                 experience_years
+     Response  : data doctor terbaru
+
+─────────────────────────────────────────────────────────────
+
+🔒🩺 GET    /doctor/schedules
+     Deskripsi : Lihat jadwal praktik dokter yang login
+     Response  : list jadwal per hari
+
+─────────────────────────────────────────────────────────────
+
+🔒🩺 GET    /doctor/patients
+     Deskripsi : Lihat semua pasien yang pernah 
+                 ditangani dokter yang login
+     Query     : search (nama pasien)
+     Response  : list pasien
+
+─────────────────────────────────────────────────────────────
+
+🔒🩺 GET    /doctor/stats
+     Deskripsi : Statistik dokter yang login:
+                 total janji hari ini, total pasien,
+                 total pemeriksaan selesai
+     Response  : data statistik
+
+================================================================
+  4. DATA DOKTER (untuk pasien & web lab)
+================================================================
+
+🔒 GET    /doctors
+   Deskripsi : List semua dokter aktif dan tersedia
+   Query     : search (nama), specialization_id, 
+               is_available
+   Response  : list dokter + spesialisasi + 
+               jadwal + biaya konsultasi
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /doctors/{id}
+   Deskripsi : Detail satu dokter lengkap
+   Response  : profil dokter + spesialisasi + jadwal
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /doctors/{id}/schedules
+   Deskripsi : Jadwal praktik dokter tertentu
+               beserta info slot yang masih tersedia
+   Query     : date (untuk cek kuota hari tertentu)
+   Response  : list hari + jam + sisa kuota
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /specializations
+   Deskripsi : List semua master data spesialisasi
+   Response  : list spesialisasi
+
+================================================================
+  5. APPOINTMENT
+================================================================
+
+🔒 GET    /appointments
+   Deskripsi : List janji temu, otomatis filter by role:
+               patient → janji miliknya sendiri
+               doctor  → janji yang ditujukan ke dia
+   Query     : status, date, limit, page
+   Response  : list appointment + 
+               data pasien/dokter + payment status
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /appointments/{id}
+   Deskripsi : Detail satu janji temu lengkap
+   Response  : appointment + pasien + dokter + 
+               payment + examination (jika ada)
+
+─────────────────────────────────────────────────────────────
+
+🔒👤 POST   /appointments
+     Deskripsi : Buat janji temu baru oleh pasien
+                 Otomatis buat record payment (status: unpaid)
+     Body      : doctor_id, appointment_date,
+                 appointment_time, patient_complaint
+     Response  : data appointment baru 
+                 (status: pending_payment) + 
+                 data payment (invoice number)
+
+─────────────────────────────────────────────────────────────
+
+🔒👤 DELETE /appointments/{id}
+     Deskripsi : Batalkan janji temu oleh pasien
+                 Hanya bisa jika status masih
+                 pending_payment atau pending_confirmation
+     Response  : message
+
+─────────────────────────────────────────────────────────────
+
+🔒🩺 PUT    /appointments/{id}/confirm
+     Deskripsi : Dokter konfirmasi janji temu
+                 Status: pending_confirmation → confirmed
+                 Kirim notifikasi ke pasien
+     Response  : data appointment terbaru
+
+─────────────────────────────────────────────────────────────
+
+🔒🩺 PUT    /appointments/{id}/reject
+     Deskripsi : Dokter tolak janji temu
+                 Status: pending_confirmation → rejected
+                 Kirim notifikasi ke pasien
+     Body      : rejection_reason
+     Response  : data appointment terbaru
+
+─────────────────────────────────────────────────────────────
+
+🔒🩺 PUT    /appointments/{id}/complete
+     Deskripsi : Dokter tandai janji selesai
+                 Status: confirmed → completed
+                 Otomatis buat record examination baru
+     Response  : data appointment + 
+                 examination baru yang dibuat
+
+================================================================
+  6. PAYMENT
+================================================================
+
+🔒 GET    /payments/{appointment_id}
+   Deskripsi : Lihat detail pembayaran 
+               berdasarkan appointment
+   Response  : invoice, nominal, status, 
+               metode, waktu bayar
+
+─────────────────────────────────────────────────────────────
+
+🔒👤 POST   /payments
+     Deskripsi : Konfirmasi pembayaran dummy oleh pasien
+                 Status payment: unpaid → paid
+                 Status appointment: 
+                 pending_payment → pending_confirmation
+                 Kirim notifikasi ke dokter
+     Body      : appointment_id, payment_method
+     Response  : data payment terbaru + invoice number
+
+================================================================
+  7. EXAMINATION
+================================================================
+
+🔒 GET    /examinations
+   Deskripsi : List pemeriksaan, otomatis filter by role:
+               patient → riwayat pemeriksaan miliknya
+               doctor  → pemeriksaan yang dia tangani
+   Query     : status, date, prediction, limit, page
+   Response  : list examination + 
+               pasien + dokter + status ML
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /examinations/{id}
+   Deskripsi : Detail satu pemeriksaan lengkap
+   Response  : examination + pasien + dokter +
+               fundus images + analysis result
+
+─────────────────────────────────────────────────────────────
+
+🔒🏥 POST   /examinations
+     Deskripsi : Buat sesi pemeriksaan baru di Web Lab
+                 Wajib dibuat sebelum upload fundus image
+     Body      : appointment_id, examination_date,
+                 examination_time
+     Response  : data examination baru 
+                 (status: pending)
+
+─────────────────────────────────────────────────────────────
+
+🔒🩺 PUT    /examinations/{id}/diagnosis
+     Deskripsi : Dokter isi diagnosis & rekomendasi
+                 setelah melihat hasil ML
+                 Status examination → completed
+                 Kirim notifikasi ke pasien
+     Body      : clinical_notes, doctor_diagnosis, 
+                 recommendation
+     Response  : data examination terbaru
+
+================================================================
+  8. FUNDUS IMAGE
+================================================================
+
+🔒🏥 POST   /fundus-images
+     Deskripsi : Upload gambar retina pasien dari Web Lab
+                 Setelah upload berhasil, Laravel otomatis:
+                 1. Simpan gambar ke storage
+                 2. Update status examination → image_uploaded
+                 3. Kirim gambar ke Python ML Service
+                 4. Update status examination → processing
+     Body      : examination_id, image (file),
+                 eye_side, device_name, capture_notes
+     Format    : multipart/form-data
+     File      : jpg, jpeg, png — max 10MB
+     Response  : data fundus image + 
+                 status analysis (queued)
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /fundus-images/{examination_id}
+   Deskripsi : Lihat semua gambar retina 
+               dalam satu pemeriksaan
+   Response  : list fundus images + URL gambar
+
+─────────────────────────────────────────────────────────────
+
+🔒🏥 DELETE /fundus-images/{id}
+     Deskripsi : Hapus gambar retina jika salah upload
+                 Hanya bisa jika ML belum selesai diproses
+     Response  : message
+
+================================================================
+  9. ANALYSIS RESULT
+================================================================
+
+🔒 GET    /analysis-results/{examination_id}
+   Deskripsi : Lihat hasil analisis ML
+               Dipakai untuk POLLING status dari Web Lab
+               saat ML sedang memproses gambar
+   Response  : prediction, confidence_score,
+               glaucoma_probability, normal_probability,
+               status (queued/processing/completed/failed),
+               analyzed_at
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /analysis-results/{id}/detail
+   Deskripsi : Detail lengkap hasil ML satu pemeriksaan
+   Response  : semua data + heatmap_image_path +
+               raw_output JSON + processing_time_ms +
+               model version yang dipakai
+
+─────────────────────────────────────────────────────────────
+
+🤖 POST   /ml/callback
+   Deskripsi : Endpoint yang DIPANGGIL BALIK oleh 
+               Python Flask setelah selesai analisis
+               Bukan untuk mobile/web, khusus ML Service
+               Laravel simpan hasil ke DB
+               Update status examination → completed
+               Kirim notifikasi ke dokter & pasien
+   Body      : examination_id, fundus_image_id,
+               prediction, confidence_score,
+               glaucoma_probability, normal_probability,
+               heatmap_image_path, processing_time_ms,
+               raw_output
+   Header    : X-ML-Secret (secret key validasi)
+   Response  : message
+
+================================================================
+  10. NOTIFIKASI
+================================================================
+
+🔒 GET    /notifications
+   Deskripsi : List semua notifikasi user yang login
+               diurutkan terbaru di atas
+   Query     : is_read (true/false), limit, page
+   Response  : list notifikasi + 
+               total_unread (jumlah belum dibaca)
+
+─────────────────────────────────────────────────────────────
+
+🔒 PUT    /notifications/{id}/read
+   Deskripsi : Tandai satu notifikasi sudah dibaca
+   Response  : data notifikasi terbaru
+
+─────────────────────────────────────────────────────────────
+
+🔒 PUT    /notifications/read-all
+   Deskripsi : Tandai semua notifikasi sudah dibaca
+   Response  : message + jumlah yang diupdate
+
+─────────────────────────────────────────────────────────────
+
+🔒 DELETE /notifications/{id}
+   Deskripsi : Hapus satu notifikasi
+   Response  : message
+
+================================================================
+  11. STORAGE / FILE ACCESS
+================================================================
+
+🔒 GET    /storage/fundus/{filename}
+   Deskripsi : Akses file gambar retina
+               Hanya bisa diakses oleh pasien/dokter 
+               yang bersangkutan
+   Response  : file gambar (jpg/png)
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /storage/heatmap/{filename}
+   Deskripsi : Akses file heatmap Grad-CAM hasil ML
+               Hanya bisa diakses oleh pasien/dokter
+               yang bersangkutan
+   Response  : file gambar (jpg/png)
+
+─────────────────────────────────────────────────────────────
+
+🔒 GET    /storage/profile/{filename}
+   Deskripsi : Akses foto profil user
+   Response  : file gambar (jpg/png)
+
+================================================================
+  12. ADMIN
+================================================================
+
+⚙️  GET    /admin/dashboard
+    Deskripsi : Data statistik untuk dashboard admin:
+                total pasien, total dokter,
+                total pemeriksaan hari ini,
+                total glaukoma vs normal,
+                rata-rata confidence score,
+                grafik pemeriksaan per bulan
+    Response  : data statistik lengkap
+
+─────────────────────────────────────────────────────────────
+
+⚙️  GET    /admin/users
+    Deskripsi : List semua user di sistem
+    Query     : role, search (nama/email), 
+                is_active, page
+    Response  : list user + data profil
+
+─────────────────────────────────────────────────────────────
+
+⚙️  GET    /admin/users/{id}
+    Deskripsi : Detail satu user lengkap
+    Response  : user + relasi patient/doctor/admin
+
+─────────────────────────────────────────────────────────────
+
+⚙️  PUT    /admin/users/{id}/toggle-active
+    Deskripsi : Aktifkan / nonaktifkan akun user
+    Response  : data user terbaru + status baru
+
+─────────────────────────────────────────────────────────────
+
+⚙️  DELETE /admin/users/{id}
+    Deskripsi : Hapus user (soft delete)
+    Response  : message
+
+─────────────────────────────────────────────────────────────
+
+⚙️  POST   /admin/doctors
+    Deskripsi : Admin buat akun dokter baru
+    Body      : name, email, password, phone,
+                specialization_id, license_number,
+                practice_location, experience_years,
+                consultation_fee, bio
+    Response  : data dokter baru + akun user
+
+─────────────────────────────────────────────────────────────
+
+⚙️  PUT    /admin/doctors/{id}
+    Deskripsi : Admin edit data dokter
+    Body      : specialization_id, license_number,
+                practice_location, experience_years,
+                consultation_fee, is_available
+    Response  : data dokter terbaru
+
+─────────────────────────────────────────────────────────────
+
+⚙️  POST   /admin/doctor-schedules
+    Deskripsi : Admin buat jadwal praktik dokter
+    Body      : doctor_id, day_of_week, 
+                start_time, end_time, max_patients
+    Response  : data jadwal baru
+
+─────────────────────────────────────────────────────────────
+
+⚙️  PUT    /admin/doctor-schedules/{id}
+    Deskripsi : Admin edit jadwal praktik dokter
+    Body      : start_time, end_time, 
+                max_patients, is_available
+    Response  : data jadwal terbaru
+
+─────────────────────────────────────────────────────────────
+
+⚙️  DELETE /admin/doctor-schedules/{id}
+    Deskripsi : Admin hapus jadwal praktik dokter
+    Response  : message
+
+─────────────────────────────────────────────────────────────
+
+⚙️  GET    /admin/appointments
+    Deskripsi : List semua appointment di sistem
+    Query     : status, date, doctor_id, 
+                patient_id, page
+    Response  : list appointment lengkap
+
+─────────────────────────────────────────────────────────────
+
+⚙️  GET    /admin/examinations
+    Deskripsi : List semua pemeriksaan di sistem
+    Query     : status, prediction, date, 
+                doctor_id, page
+    Response  : list examination + hasil ML
+
+─────────────────────────────────────────────────────────────
+
+⚙️  GET    /admin/ml-models
+    Deskripsi : List semua versi model ML yang 
+                pernah dipakai
+    Response  : list model + metrik 
+                (akurasi, AUC-ROC, F1-score, dll)
+
+─────────────────────────────────────────────────────────────
+
+⚙️  POST   /admin/ml-models
+    Deskripsi : Daftarkan versi model ML baru ke sistem
+    Body      : version_name, architecture, 
+                model_file_path, dataset_used,
+                accuracy, sensitivity, specificity,
+                auc_roc, f1_score, precision,
+                total_training_data, description
+    Response  : data model baru
+
+─────────────────────────────────────────────────────────────
+
+⚙️  PUT    /admin/ml-models/{id}/activate
+    Deskripsi : Aktifkan versi model ML tertentu
+                Otomatis nonaktifkan semua model lainnya
+                Hanya 1 model yang aktif di waktu bersamaan
+    Response  : data model terbaru
+
+─────────────────────────────────────────────────────────────
+
+⚙️  GET    /admin/activity-logs
+    Deskripsi : Lihat audit trail semua aktivitas
+                di sistem
+    Query     : user_id, module, action, 
+                date, page
+    Response  : list log aktivitas
+
+================================================================
+  RINGKASAN LENGKAP
+================================================================
+
+  Total endpoint   : 52 endpoint
+  Public           : 4  (register, login, 
+                         forgot-password, reset-password)
+  Protected        : 47 (butuh token)
+  Internal ML      : 1  (ml/callback, dipanggil Flask)
+
+  ┌─────────────────────────────────┬──────────┐
+  │ Modul                           │ Endpoint │
+  ├─────────────────────────────────┼──────────┤
+  │ 1.  Auth                        │    8     │
+  │ 2.  Profil Pasien               │    4     │
+  │ 3.  Profil Dokter               │    5     │
+  │ 4.  Data Dokter                 │    4     │
+  │ 5.  Appointment                 │    7     │
+  │ 6.  Payment                     │    2     │
+  │ 7.  Examination                 │    4     │
+  │ 8.  Fundus Image                │    3     │
+  │ 9.  Analysis Result + ML CB     │    3     │
+  │ 10. Notifikasi                  │    4     │
+  │ 11. Storage / File Access       │    3     │
+  │ 12. Admin                       │   15     │
+  ├─────────────────────────────────┼──────────┤
+  │ TOTAL                           │   52     │
+  └─────────────────────────────────┴──────────┘
+
+  Digunakan oleh:
+  📱 Mobile App    → Auth, Profil, Dokter, Appointment,
+                     Payment, Examination, Analysis,
+                     Notifikasi, Storage
+  🖥️  Web Lab       → Auth, Examination (POST), 
+                     Fundus Image, Analysis Result,
+                     Storage
+  🖥️  Web Admin     → Auth, Admin (semua), Storage
+  🐍 ML Service    → /ml/callback (internal)
+
+================================================================

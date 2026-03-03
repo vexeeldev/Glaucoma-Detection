@@ -1,0 +1,168 @@
+Ini alur lengkapnya dari awal sampai akhir:
+
+
+📱 FASE 1 — REGISTRASI & LOGIN
+Pasien download aplikasi GlaucoScan
+        ↓
+Buka aplikasi → tap "Daftar"
+        ↓
+Isi nama, email, nomor HP, password
+        ↓
+Akun terbuat → otomatis login
+        ↓
+Masuk ke Home Screen
+
+
+🗓️ FASE 2 — BUAT JANJI TEMU
+
+Pasien tap menu "Buat Janji"
+        ↓
+Lihat daftar dokter + spesialisasi + biaya
+        ↓
+Pilih dokter
+        ↓
+Pilih tanggal & jam yang tersedia
+        ↓
+Isi keluhan mata
+        ↓
+Tap "Lanjut ke Pembayaran"
+        ↓
+Pilih metode pembayaran → konfirmasi
+        ↓
+Status janji → pending_confirmation
+        ↓
+Pasien dapat notifikasi "Janji menunggu konfirmasi dokter"
+
+
+🩺 FASE 3 — DOKTER KONFIRMASI
+
+Dokter buka aplikasi mobile
+        ↓
+Masuk notifikasi "Ada janji temu baru"
+        ↓
+Buka daftar janji → lihat detail pasien & keluhan
+        ↓
+Tap "Konfirmasi" atau "Tolak"
+        ↓
+Jika konfirmasi → status jadi confirmed
+        ↓
+Pasien dapat notifikasi "Janji temu dikonfirmasi"
+        ↓
+Pasien lihat detail: dokter, tanggal, jam, lokasi
+
+🏥 FASE 4 — PASIEN DATANG KE KLINIK
+
+Hari H pasien datang ke RS/klinik
+        ↓
+Daftar ke resepsionis → tunjukkan bukti janji di aplikasi
+        ↓
+Tunggu dipanggil
+        ↓
+Masuk ruang pemeriksaan mata
+        ↓
+Dokter/teknisi menyiapkan alat fundus camera
+        ↓
+Pasien duduk di depan alat
+        ↓
+Foto retina diambil → mata kiri & kanan
+        ↓
+Gambar otomatis tersimpan di komputer klinik
+
+🖥️ FASE 5 — PROSES DI WEB LAB
+
+Teknisi/dokter buka Web Lab di komputer klinik
+        ↓
+Login → pilih nama pasien yang baru diperiksa
+        ↓
+Upload foto retina dari komputer
+        ↓
+Laravel terima gambar → simpan ke storage server
+        ↓
+Laravel otomatis kirim gambar ke Python ML Service
+        ↓
+Python jalankan model CNN
+        ↓
+        Proses analisis...
+        (loading real-time di Web Lab)
+        ↓
+ML kirim hasil balik ke Laravel:
+- prediction: glaucoma / normal
+- confidence: 0.92 (92%)
+- glaucoma_probability: 0.92
+- normal_probability: 0.08
+- heatmap image path
+        ↓
+Laravel simpan hasil ke database
+        ↓
+Hasil langsung tampil di Web Lab:
+- GLAUKOMA / NORMAL dalam font besar
+- Confidence score + progress bar
+- Heatmap Grad-CAM (area yang terdeteksi)
+
+👨‍⚕️ FASE 6 — DOKTER BERI DIAGNOSIS
+
+Dokter buka aplikasi mobile
+        ↓
+Masuk notifikasi "Hasil ML pemeriksaan [nama pasien] selesai"
+        ↓
+Buka detail pemeriksaan
+        ↓
+Lihat hasil ML + heatmap
+        ↓
+Dokter analisis hasil + gabungkan dengan pemeriksaan fisik
+        ↓
+Isi form diagnosis:
+- Catatan klinis
+- Diagnosis final
+- Rekomendasi tindak lanjut
+  (misal: "Perlu pemeriksaan lanjutan", 
+          "Mulai pengobatan", 
+          "Kontrol 3 bulan lagi")
+        ↓
+Tap "Simpan Diagnosis"
+        ↓
+Status pemeriksaan → completed
+        ↓
+Pasien dapat notifikasi "Hasil pemeriksaan sudah tersedia"
+
+📊 FASE 7 — PASIEN LIHAT HASIL
+
+Pasien dapat notifikasi di HP
+        ↓
+Buka aplikasi → tap notifikasi
+        ↓
+Masuk ke halaman "Hasil Pemeriksaan"
+        ↓
+Lihat detail lengkap:
+┌─────────────────────────────┐
+│  Hasil: NORMAL ✅           │
+│  Confidence: 92%            │
+│  ▓▓▓▓▓▓▓▓▓▓░░ 92%          │
+│                             │
+│  Foto Retina    Heatmap     │
+│  [gambar]       [gambar]    │
+│                             │
+│  Diagnosis Dokter:          │
+│  "Tidak ditemukan tanda     │
+│   glaukoma. Disarankan      │
+│   kontrol rutin 1 tahun"    │
+└─────────────────────────────┘
+        ↓
+Pasien bisa download PDF hasil
+        ↓
+Selesai ✅
+
+Ringkasan alur:
+Daftar → Buat Janji → Bayar → Dokter Konfirmasi
+→ Datang ke Klinik → Foto Retina → Upload di Web Lab
+→ ML Proses → Dokter Diagnosis → Pasien Lihat Hasil
+
+Admin buat jadwal rutin dokter
+        ↓
+Misal: Senin-Jumat 08.00-12.00, kuota 10 pasien
+        ↓
+Dokter bisa tutup jadwal sementara
+        ↓
+Misal: "Senin depan saya sakit, tutup dulu"
+        ↓
+Otomatis pasien gak bisa booking hari itu
