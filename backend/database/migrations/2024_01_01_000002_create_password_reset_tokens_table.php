@@ -7,10 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * ╔══════════════════════════════════════════════╗
-     * ║  TABEL: password_reset_tokens                ║
-     * ║  Deskripsi: Token untuk reset password       ║
-     * ╚══════════════════════════════════════════════╝
+     *   TABEL: password_reset_tokens                
+     *   Deskripsi: Token untuk reset password  
      */
     public function up(): void
     {
