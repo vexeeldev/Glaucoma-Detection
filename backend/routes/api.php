@@ -1,10 +1,13 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ML\MachineController; //model ml
 use App\Http\Controllers\labs\DashboardController;
 use App\Http\Controllers\labs\ExaminationController;
+
+// use Illuminate\Auth\Events\Logout;
+use App\Http\Controllers\Desktop\{LoginAdminController, LogoutAdminController, RegisterAdminController};
+use App\Http\Controllers\Mobile\{LoginController, LogoutController, RegisterController};
 
 Route::prefix('ml')->group(function () {
     Route::post('/check-glaucoma', [MachineController::class, 'predict']);
@@ -20,21 +23,21 @@ Route::prefix('labs')->group(function () {
 });
 
 
-
-
-
-
-
-
-
-
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/profile', [AuthController::class, 'updateProfile']);
+Route::prefix('desktop')->group(function () {
+    Route::post('/register', [RegisterAdminController::class, 'register']);
+    Route::post('/login', [LoginAdminController::class, 'login']);
+    
+    Route::middleware('auth:sanctum')->group(function(){
+        Route::post('/logout', [LogoutAdminController::class, 'logout']);
+        });
 });
+
+Route::prefix('mobile')->group(function () {
+    Route::post('/register', [RegisterController::class, 'register']);
+    Route::post('/login', [LoginController::class, 'login']);
+    
+    Route::middleware('auth:sanctum')->group(function(){
+        Route::post('/logout', [LogoutController::class, 'logout']);
+        });
+});
+

@@ -6,35 +6,33 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * ╔══════════════════════════════════════════════╗
-     * ║  TABEL: users                                ║
-     * ║  Deskripsi: Base table untuk semua role      ║
-     * ║  Role: patient | doctor | admin              ║
-     * ╚══════════════════════════════════════════════╝
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
 
-            // ── Primary Key
             $table->id();
 
-            // ── Identitas
             $table->string('name', 100);
             $table->string('email', 150)->unique();
             $table->string('password', 255);
             $table->string('phone', 20)->nullable();
 
-            // ── Role & Status
+            $table->string('nik', 16)->unique()->nullable();
+            $table->string('username', 50)->unique()->nullable();
+            $table->date('date_of_birth')->nullable();
+            $table->enum('gender', ['male', 'female'])->nullable();
+            $table->text('address')->nullable();
+            $table->string('city', 80)->nullable();
+            $table->string('province', 80)->nullable();
+            $table->string('religion', 50)->nullable();
+            $table->string('nationality', 50)->default('Indonesia');
+
             $table->enum('role', ['patient', 'doctor', 'admin'])->default('patient');
             $table->boolean('is_active')->default(true);
 
-            // ── Auth
             $table->string('remember_token', 100)->nullable();
             $table->timestamp('email_verified_at')->nullable();
 
-            // ── Timestamps
             $table->timestamps();
             $table->softDeletes();
         });

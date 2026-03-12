@@ -6,26 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * ╔══════════════════════════════════════════════╗
-     * ║  TABEL: examinations                         ║
-     * ║  Deskripsi: Sesi pemeriksaan retina          ║
-     * ║  Relasi: 1:1 dengan appointments             ║
-     * ║          M:1 dengan patients                 ║
-     * ║          M:1 dengan doctors                  ║
-     * ║  Status flow:                                ║
-     * ║    pending → image_uploaded                  ║
-     * ║      → processing → completed / failed       ║
-     * ╚══════════════════════════════════════════════╝
-     */
+
     public function up(): void
     {
         Schema::create('examinations', function (Blueprint $table) {
 
-            // ── Primary Key
             $table->id();
 
-            // ── Foreign Keys
             $table->foreignId('appointment_id')
                   ->unique()
                   ->constrained('appointments')
@@ -55,16 +42,12 @@ return new class extends Migration
                 'failed',
             ])->default('pending');
 
-            // ── Catatan Medis
-            $table->text('clinical_notes')->nullable();         // catatan klinis umum
-            $table->text('doctor_diagnosis')->nullable();       // diagnosis final dokter
-            $table->text('recommendation')->nullable();         // rekomendasi tindak lanjut
-
-            // ── Index
+            $table->text('clinical_notes')->nullable();        
+            $table->text('doctor_diagnosis')->nullable();       
+            $table->text('recommendation')->nullable();        
             $table->index(['patient_id', 'examination_date']);
             $table->index('status');
 
-            // ── Timestamps
             $table->timestamps();
             $table->softDeletes();
         });
