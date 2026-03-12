@@ -48,4 +48,29 @@ class ExaminationController extends Controller
         }
         return response()->json(['status' => 'error'], 404);
     }
+
+    public function history(Request $request)
+    {
+        $query = Appointment::with(['patient.user', 'doctor', 'examination.analysisResults'])
+            ->where('appointment_status', 'completed');
+
+        $data = $query->latest()->get()->map(function($app) {
+            // Ambil hasil analisis dari relasi examination
+            $analysis = $app->examination->analysisResults->first() ?? null;
+
+            return [
+                'id'    => $app->id,
+                'name'  => $app->patient->user->name,
+                'date'  => \Carbon\Carbon::parse($app->appointment_date)->format('d/m/Y'),
+                'eye'    => $analysis->eye_side ?? 'Keduanya',
+                'result' => $analysis ? strtoupper($analysis->prediction) : 'NORMAL',
+                'conf'   => $analysis ? (int)($analysis->confidence_score * 100) : 0,
+                'doctor' => $app->doctor->name ?? 'dr. Budi Santoso',
+                'advice' => $analysis->medical_advice ?? 'Tetap jaga kondisi kesehatan mata.'
+            ];
+        });
+
+        return response()->json($data);
+    }
+    
 }
