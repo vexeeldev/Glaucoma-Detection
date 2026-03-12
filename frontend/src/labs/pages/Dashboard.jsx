@@ -51,7 +51,7 @@ const Dashboard = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() => navigate('/pemeriksaan')}
+                          onClick={() => navigate('/labs/pemeriksaan')}
                           className="bg-[#1565C0] text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-all flex items-center gap-2 ml-auto"
                         >
                           Periksa <ChevronRight size={16} />

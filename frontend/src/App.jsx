@@ -1,57 +1,104 @@
-import { useState } from 'react';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+/* ===== IMPORT COMPONENT & PAGES ===== */
+import Login from './auth/Login';
+import MainLayout from './admin/Layouts/MainLayouts';
+import DashboardPage from './admin/pages/DashboardPage';
+import UserPage from './admin/pages/UserPage';
+import DoctorPage from './admin/pages/DoctorPage';
+import AppointmentPage from './admin/pages/AppointmentPage';
+import ExaminationPage from './admin/pages/ExaminationPage';
+import MLModelPage from './admin/pages/MLModelPage';
+import ActivityLogPage from './admin/pages/ActivityLogPage';
 
 import Layout from './labs/components/Layout';
-import Login from './labs/pages/Login';
 import Dashboard from './labs/pages/Dashboard';
 import Examination from './labs/pages/Examination';
 import History from './labs/pages/History';
 
-// Guard: redirect ke /login jika belum autentikasi
+// Komponen Proteksi Route
 const ProtectedRoute = ({ isLoggedIn, children }) => {
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   return children;
 };
 
-const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+export default function App() {
+  // Ambil status login dari localStorage (biar gak hilang pas refresh)
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    localStorage.getItem('isLoggedIn') === 'true'
+  );
+  const [userRole, setUserRole] = useState(
+    localStorage.getItem('userRole') || null
+  );
+
+  const handleLogin = (role) => {
+    setIsLoggedIn(true);
+    setUserRole(role);
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('userRole', role);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserRole(null);
+    localStorage.clear(); // Hapus data login
+  };
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* Halaman Login — redirect ke dashboard jika sudah login */}
+        {/* HALAMAN LOGIN */}
         <Route
           path="/login"
           element={
-            isLoggedIn
-              ? <Navigate to="/dashboard" replace />
-              : <Login onLogin={() => setIsLoggedIn(true)} />
+            isLoggedIn ? (
+              // Jika sudah login, lempar ke dashboard sesuai role masing-masing
+              <Navigate to={userRole === 'admin' ? "/admin/dashboard" : "/labs/dashboard"} replace />
+            ) : (
+              <Login onLogin={handleLogin} />
+            )
           }
         />
 
-        {/* Halaman yang butuh autentikasi — dibungkus Layout sebagai Outlet */}
+        {/* ===== ADMIN AREA ===== */}
         <Route
+          path="/admin"
           element={
             <ProtectedRoute isLoggedIn={isLoggedIn}>
-              <Layout onLogout={() => setIsLoggedIn(false)} />
+              <MainLayout onLogout={handleLogout} />
             </ProtectedRoute>
           }
         >
-          <Route path="/dashboard"    element={<Dashboard />} />
-          <Route path="/pemeriksaan"  element={<Examination />} />
-          <Route path="/riwayat"      element={<History />} />
+          {/* Default path untuk /admin adalah dashboard */}
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="users" element={<UserPage />} />
+          <Route path="doctors" element={<DoctorPage />} />
+          <Route path="appointments" element={<AppointmentPage />} />
+          <Route path="examinations" element={<ExaminationPage />} />
+          <Route path="ml" element={<MLModelPage />} />
+          <Route path="logs" element={<ActivityLogPage />} />
         </Route>
 
-        {/* Fallback — arahkan ke login */}
+        {/* ===== LABS AREA ===== */}
+        <Route
+          path="/labs"
+          element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <Layout onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="pemeriksaan" element={<Examination />} />
+          <Route path="riwayat" element={<History />} />
+        </Route>
+
+        {/* CATCH ALL */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
-};
-
-export default App;
+}
