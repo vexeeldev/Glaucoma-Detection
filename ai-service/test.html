@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glaucoma Detection - PENS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Deteksi Glaukoma AI</h1>
+        <p class="text-gray-500 mb-6 text-sm">Upload foto fundus mata untuk analisis cepat.</p>
+
+        <input type="file" id="imageInput" accept="image/*" class="mb-4 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+
+        <img id="preview" class="hidden w-full h-48 object-cover rounded-lg mb-4 border">
+
+        <button onclick="uploadImage()" id="btnPredict" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+            Mulai Analisis
+        </button>
+
+        <div id="loading" class="hidden text-center mt-4 text-blue-600 font-medium">Sedang menganalisis...</div>
+
+        <div id="resultBox" class="hidden mt-6 p-4 rounded-xl border-2">
+            <h3 id="predictionText" class="text-xl font-bold"></h3>
+            <p id="probabilityText" class="text-sm text-gray-600 mb-2"></p>
+            <div class="h-px bg-gray-200 my-2"></div>
+            <p id="adviceText" class="text-sm italic text-gray-700"></p>
+        </div>
+    </div>
+    <script>
+    const imageInput = document.getElementById('imageInput');
+    const preview = document.getElementById('preview');
+
+    // Preview gambar saat dipilih
+    imageInput.onchange = evt => {
+        const [file] = imageInput.files;
+        if (file) {
+            preview.src = URL.createObjectURL(file);
+            preview.classList.remove('hidden');
+        }
+    }
+
+    async function uploadImage() {
+        const file = imageInput.files[0];
+        if (!file) return alert("Pilih gambar dulu, Kab!");
+
+        const formData = new FormData();
+        formData.append('image', file); // Sesuai dengan Controller Laravel
+
+        // UI Feedback
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('resultBox').classList.add('hidden');
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/ml/check-glaucoma', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+            document.getElementById('loading').classList.add('hidden');
+
+            if (response.ok && result.status === "success") {
+                // DI SINI DIA MANGGIL FUNGSI DI BAWAH
+                showResult(result.data); 
+            } else {
+                alert("Error: " + (result.message || "Terjadi kesalahan"));
+            }
+        } catch (error) {
+            console.error("Detail Error:", error);
+            document.getElementById('loading').classList.add('hidden');
+            alert("Koneksi gagal! Pastikan Laravel & Flask jalan.");
+        }
+    }
+
+    // PASTIKAN FUNGSI INI ADA DAN NAMANYA BENAR
+    function showResult(data) {
+        const box = document.getElementById('resultBox');
+        const pText = document.getElementById('predictionText');
+        const probText = document.getElementById('probabilityText');
+        const adviceText = document.getElementById('adviceText');
+        
+        box.classList.remove('hidden');
+        pText.innerText = data.prediction;
+        probText.innerText = `Confidence: ${(data.confidence_score * 100).toFixed(2)}%`;
+        adviceText.innerText = data.medical_advice;
+
+        // Reset class warna dulu
+        box.className = "mt-6 p-4 rounded-xl border-2";
+
+        // Kasih warna berdasarkan hasil
+        if (data.prediction.includes("Glaukoma")) {
+            box.classList.add("border-red-500", "bg-red-50", "text-red-900");
+        } else {
+            box.classList.add("border-green-500", "bg-green-50", "text-green-900");
+        }
+    }
+</script>
+</body>
+</html>
