@@ -14,6 +14,7 @@ Route::prefix('ml')->group(function () {
 });
 Route::prefix('labs')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/history', [ExaminationController::class, 'history']);
     Route::get('/examination-detail/{id}', [ExaminationController::class, 'getDetail']);
     Route::post('/examination-complete/{id}', [ExaminationController::class, 'updateStatus']);
 

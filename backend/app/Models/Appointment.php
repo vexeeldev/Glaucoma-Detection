@@ -40,4 +40,9 @@ class Appointment extends Model
     {
         return $this->belongsTo(User::class, 'doctor_id');
     }
+      public function analysis()
+    {
+        // Asumsi di tabel analysis_results ada kolom appointment_id
+        return $this->hasOne(AnalysisResult::class, 'appointment_id');
+    }
 }
