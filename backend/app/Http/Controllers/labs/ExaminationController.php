@@ -51,26 +51,42 @@ class ExaminationController extends Controller
 
     public function history(Request $request)
     {
-        $query = Appointment::with(['patient.user', 'doctor', 'examination.analysisResults'])
-            ->where('appointment_status', 'completed');
+        try {
+            $query = Appointment::with(['patient.user', 'doctor', 'examination.analysisResults', 'examination.fundusImage'])
+                ->where('appointment_status', 'completed');
 
-        $data = $query->latest()->get()->map(function($app) {
-            // Ambil hasil analisis dari relasi examination
-            $analysis = $app->examination->analysisResults->first() ?? null;
+            // Tambahkan filter search sederhana kalau kamu mau searchnya jalan
+            if ($request->has('search')) {
+                $query->whereHas('patient.user', function($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->search . '%');
+                });
+            }
 
-            return [
-                'id'    => $app->id,
-                'name'  => $app->patient->user->name,
-                'date'  => \Carbon\Carbon::parse($app->appointment_date)->format('d/m/Y'),
-                'eye'    => $analysis->eye_side ?? 'Keduanya',
-                'result' => $analysis ? strtoupper($analysis->prediction) : 'NORMAL',
-                'conf'   => $analysis ? (int)($analysis->confidence_score * 100) : 0,
-                'doctor' => $app->doctor->name ?? 'dr. Budi Santoso',
-                'advice' => $analysis->medical_advice ?? 'Tetap jaga kondisi kesehatan mata.'
-            ];
-        });
+            $data = $query->latest()->get()->map(function($app) {
+                // Pakai optional biar aman kalau examination-nya null
+                $examination = $app->examination;
+                $analysis = $examination ? $examination->analysisResults->first() : null;
+                $fundus = $examination ? $examination->fundusImage : null;
 
-        return response()->json($data);
+                return [
+                    'id'     => $app->id,
+                    'name'   => $app->patient->user->name ?? 'Tanpa Nama',
+                    'date'   => \Carbon\Carbon::parse($app->appointment_date)->format('d/m/Y'),
+                    'eye'    => $analysis->eye_side ?? 'Keduanya',
+                    'result' => $analysis ? strtoupper($analysis->prediction) : 'NORMAL',
+                    'conf'   => $analysis ? (int)($analysis->confidence_score * 100) : 0,
+                    'doctor' => $app->doctor->name ?? 'dr. Budi Santoso',
+                    'advice' => $analysis->medical_advice ?? 'Tetap jaga kondisi kesehatan mata.',
+                    'image_url' => $fundus ? $fundus->file_path : null, 
+                ];
+            });
+
+            return response()->json($data);
+            
+        } catch (\Exception $e) {
+            // Balikin error dalam bentuk JSON biar React nggak bingung
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
     
 }

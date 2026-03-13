@@ -11,14 +11,14 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Patient;
 use App\Models\Doctor;
-
+use Illuminate\Support\Facades\Validator;
 use App\Http\Resources\UserResource;
 
 class RegisterController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
 
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:150|unique:users,email',
@@ -41,6 +41,16 @@ class RegisterController extends Controller
 
             'role' => 'required|in:patient,doctor'
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validated = $validator->validated();
 
         try {
 

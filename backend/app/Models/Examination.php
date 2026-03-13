@@ -31,8 +31,10 @@ class Examination extends Model
     }
 
     // Relasi ke file gambar fundus
-    public function fundusImages()
+    public function fundusImage()
     {
-        return $this->hasMany(FundusImage::class);
+        // Sesuaikan 'FundusImage' dengan nama class Model gambar kamu
+        // Sesuaikan 'examination_id' dengan nama kolom foreign key di tabel fundus_images
+        return $this->hasOne(FundusImage::class, 'examination_id');
     }
 }
