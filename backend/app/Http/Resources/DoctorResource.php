@@ -15,12 +15,10 @@ class DoctorResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            // Basic Info
             'id' => $this->id,
             'user_id' => $this->user_id,
             'specialization_id' => $this->specialization_id,
             
-            // Professional Info
             'license_number' => $this->license_number,
             'practice_location' => $this->practice_location,
             'experience_years' => $this->experience_years,
@@ -29,11 +27,9 @@ class DoctorResource extends JsonResource
             'consultation_fee' => (float) $this->consultation_fee,
             'is_available' => $this->is_available,
             
-            // Timestamps
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             
-            // Relasi User
             $this->mergeWhen($this->relationLoaded('user'), [
                 'user' => new UserResource($this->user),
             ]),
