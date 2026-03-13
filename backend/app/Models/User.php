@@ -47,10 +47,10 @@ class User extends Authenticatable
         return $this->hasOne(Doctor::class);
     }
 
-    public function admin()
-    {
-        return $this->hasOne(Admin::class);
-    }
+    // public function admin()
+    // {
+    //     return $this->hasOne(Admin::class);
+    // }
 
     public function notifications()
     {
@@ -101,5 +101,9 @@ class User extends Authenticatable
     public function scopeOfRole($query, $role)
     {
         return $query->where('role', $role);
+    }
+    public function admin()
+    {
+        return $this->hasOne(\App\Models\Admin::class, 'user_id', 'id');
     }
 }

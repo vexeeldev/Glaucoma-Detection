@@ -55,38 +55,71 @@ class ExaminationController extends Controller
             $query = Appointment::with(['patient.user', 'doctor', 'examination.analysisResults', 'examination.fundusImage'])
                 ->where('appointment_status', 'completed');
 
-            // Tambahkan filter search sederhana kalau kamu mau searchnya jalan
-            if ($request->has('search')) {
-                $query->whereHas('patient.user', function($q) use ($request) {
-                    $q->where('name', 'like', '%' . $request->search . '%');
-                });
-            }
+            $results = $query->latest()->get();
 
-            $data = $query->latest()->get()->map(function($app) {
-                // Pakai optional biar aman kalau examination-nya null
+            $data = $results->map(function($app) {
                 $examination = $app->examination;
                 $analysis = $examination ? $examination->analysisResults->first() : null;
                 $fundus = $examination ? $examination->fundusImage : null;
 
+                // Pastikan confidence_score dikali 100 di sini
+                $score = $analysis ? (float)$analysis->confidence_score : 0;
+                if ($score <= 1 && $score > 0) {
+                    $score = $score * 100;
+                }
+
                 return [
                     'id'     => $app->id,
                     'name'   => $app->patient->user->name ?? 'Tanpa Nama',
-                    'date'   => \Carbon\Carbon::parse($app->appointment_date)->format('d/m/Y'),
+                    'date'   => $app->appointment_date ? \Carbon\Carbon::parse($app->appointment_date)->format('Y-m-d') : null,
+                    'display_date' => $app->appointment_date ? \Carbon\Carbon::parse($app->appointment_date)->format('d/m/Y') : '-',
                     'eye'    => $analysis->eye_side ?? 'Keduanya',
                     'result' => $analysis ? strtoupper($analysis->prediction) : 'NORMAL',
-                    'conf'   => $analysis ? (int)($analysis->confidence_score * 100) : 0,
+                    'conf'   => (int)$score, // Sekarang pasti angka puluhan (0-100)
                     'doctor' => $app->doctor->name ?? 'dr. Budi Santoso',
                     'advice' => $analysis->medical_advice ?? 'Tetap jaga kondisi kesehatan mata.',
                     'image_url' => $fundus ? $fundus->file_path : null, 
                 ];
             });
 
-            return response()->json($data);
+            $filtered = $data;
+
+            // --- PERBAIKAN FILTER NAMA (Pakai Str::contains agar lebih aman) ---
+            if ($request->filled('search')) {
+                $search = strtolower($request->search);
+                $filtered = $filtered->filter(function($item) use ($search) {
+                    // Kita paksa semua jadi kecil pas dibandingin
+                    return \Illuminate\Support\Str::contains(strtolower($item['name']), $search);
+                });
+            }
+
+            // Filter Tanggal
+            if ($request->filled('date')) {
+                $filtered = $filtered->where('date', $request->date);
+            }
+
+            
+            // Filter Hasil AI
+            if ($request->filled('result') && $request->result !== 'Semua') {
+                $resFilter = strtoupper($request->result); // GLAUCOMA
+                
+                $filtered = $filtered->filter(function($item) use ($resFilter) {
+                    $itemResult = strtoupper($item['result']);
+                    
+                    // Logika cerdas: Kalau nyari Glaukoma/Glaucoma, ambil kata depannya aja biar pasti kena
+                    if ($resFilter === 'GLAUCOMA' || $resFilter === 'GLAUKOMA') {
+                        return str_contains($itemResult, 'GLAU'); 
+                    }
+                    
+                    return str_contains($itemResult, $resFilter);
+                });
+            }
+
+            return response()->json($filtered->values());
             
         } catch (\Exception $e) {
-            // Balikin error dalam bentuk JSON biar React nggak bingung
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-    
+        
 }

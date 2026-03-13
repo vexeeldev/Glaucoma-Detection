@@ -143,7 +143,7 @@ INSERT INTO doctor_schedules (id, doctor_id, day_of_week, start_time, end_time, 
 (8,  3, 'wednesday', '13:00:00', '17:00:00', true, 8,  NOW(), NOW()),
 (9,  3, 'friday',    '08:00:00', '12:00:00', true, 10, NOW(), NOW()),
 -- Dokter Linda Kusuma (Kornea)
-(10, 4, 'tuesday',   '13:00:00', '17:00:00', true, 8,  NOW(), NOW()),
+(10, 4, 'tuesday',   '13:http://localhost:5173/admin/users00:00', '17:00:00', true, 8,  NOW(), NOW()),
 (11, 4, 'thursday',  '13:00:00', '17:00:00', true, 8,  NOW(), NOW()),
 -- Dokter Hendra Wijaya (Katarak)
 (12, 5, 'monday',    '08:00:00', '12:00:00', true, 10, NOW(), NOW()),
@@ -259,39 +259,39 @@ INSERT INTO analysis_results (id, examination_id, fundus_image_id, model_version
 -- 13. NOTIFICATIONS
 -- ================================================================
 
-INSERT INTO notifications (id, user_id, title, message, type, channel, is_read, sent_at, created_at, updated_at) VALUES
-('notif-001', 9,  'Janji Temu Dikonfirmasi',     'Janji temu Anda dengan dr. Budi Santoso pada 01 Maret 2024 telah dikonfirmasi.',          'appointment_confirmed',  'push', true,  '2024-02-25 10:00:00', NOW(), NOW()),
-('notif-002', 9,  'Pembayaran Berhasil',          'Pembayaran invoice INV-20240301-001 sebesar Rp 250.000 telah berhasil dikonfirmasi.',      'payment_confirmed',      'push', true,  '2024-02-24 09:30:00', NOW(), NOW()),
-('notif-003', 9,  'Hasil Pemeriksaan Tersedia',   'Hasil pemeriksaan mata Anda pada 01 Maret 2024 sudah tersedia. Silakan cek aplikasi.',    'analysis_ready',         'push', true,  '2024-03-01 09:00:00', NOW(), NOW()),
-('notif-004', 10, 'Janji Temu Dikonfirmasi',      'Janji temu Anda dengan dr. Sari Dewi pada 02 Maret 2024 telah dikonfirmasi.',             'appointment_confirmed',  'push', true,  '2024-02-26 11:00:00', NOW(), NOW()),
-('notif-005', 10, 'Hasil Pemeriksaan Tersedia',   'Hasil pemeriksaan mata Anda pada 02 Maret 2024 sudah tersedia.',                          'analysis_ready',         'push', false, '2024-03-02 10:00:00', NOW(), NOW()),
-('notif-006', 3,  'Janji Temu Baru',              'Pasien Andi Wijaya telah membuat janji temu untuk 01 Maret 2024 pukul 08:00.',            'appointment_created',    'push', true,  '2024-02-24 09:00:00', NOW(), NOW()),
-('notif-007', 3,  'Hasil ML Selesai',             'Hasil analisis ML pemeriksaan EXM-20240301-001 sudah siap untuk ditinjau.',               'examination_completed',  'push', true,  '2024-03-01 08:20:00', NOW(), NOW()),
-('notif-008', 4,  'Janji Temu Baru',              'Pasien Bela Puspita telah membuat janji temu untuk 02 Maret 2024 pukul 09:00.',           'appointment_created',    'push', true,  '2024-02-25 08:00:00', NOW(), NOW()),
-('notif-009', 11, 'Janji Temu Ditolak',           'Maaf, janji temu Anda pada 25 Maret 2024 ditolak. Alasan: Jadwal penuh.',                 'appointment_rejected',   'push', true,  '2024-03-10 09:00:00', NOW(), NOW()),
-('notif-010', 9,  'Pengingat Janji Temu',         'Mengingatkan Anda memiliki janji temu dengan dr. Budi Santoso besok pukul 10:00.',        'appointment_confirmed',  'push', false, '2024-03-21 08:00:00', NOW(), NOW());
+-- INSERT INTO notifications (id, user_id, title, message, type, channel, is_read, sent_at, created_at, updated_at) VALUES
+-- ('notif-001', 9,  'Janji Temu Dikonfirmasi',     'Janji temu Anda dengan dr. Budi Santoso pada 01 Maret 2024 telah dikonfirmasi.',          'appointment_confirmed',  'push', true,  '2024-02-25 10:00:00', NOW(), NOW()),
+-- ('notif-002', 9,  'Pembayaran Berhasil',          'Pembayaran invoice INV-20240301-001 sebesar Rp 250.000 telah berhasil dikonfirmasi.',      'payment_confirmed',      'push', true,  '2024-02-24 09:30:00', NOW(), NOW()),
+-- ('notif-003', 9,  'Hasil Pemeriksaan Tersedia',   'Hasil pemeriksaan mata Anda pada 01 Maret 2024 sudah tersedia. Silakan cek aplikasi.',    'analysis_ready',         'push', true,  '2024-03-01 09:00:00', NOW(), NOW()),
+-- ('notif-004', 10, 'Janji Temu Dikonfirmasi',      'Janji temu Anda dengan dr. Sari Dewi pada 02 Maret 2024 telah dikonfirmasi.',             'appointment_confirmed',  'push', true,  '2024-02-26 11:00:00', NOW(), NOW()),
+-- ('notif-005', 10, 'Hasil Pemeriksaan Tersedia',   'Hasil pemeriksaan mata Anda pada 02 Maret 2024 sudah tersedia.',                          'analysis_ready',         'push', false, '2024-03-02 10:00:00', NOW(), NOW()),
+-- ('notif-006', 3,  'Janji Temu Baru',              'Pasien Andi Wijaya telah membuat janji temu untuk 01 Maret 2024 pukul 08:00.',            'appointment_created',    'push', true,  '2024-02-24 09:00:00', NOW(), NOW()),
+-- ('notif-007', 3,  'Hasil ML Selesai',             'Hasil analisis ML pemeriksaan EXM-20240301-001 sudah siap untuk ditinjau.',               'examination_completed',  'push', true,  '2024-03-01 08:20:00', NOW(), NOW()),
+-- ('notif-008', 4,  'Janji Temu Baru',              'Pasien Bela Puspita telah membuat janji temu untuk 02 Maret 2024 pukul 09:00.',           'appointment_created',    'push', true,  '2024-02-25 08:00:00', NOW(), NOW()),
+-- ('notif-009', 11, 'Janji Temu Ditolak',           'Maaf, janji temu Anda pada 25 Maret 2024 ditolak. Alasan: Jadwal penuh.',                 'appointment_rejected',   'push', true,  '2024-03-10 09:00:00', NOW(), NOW()),
+-- ('notif-010', 9,  'Pengingat Janji Temu',         'Mengingatkan Anda memiliki janji temu dengan dr. Budi Santoso besok pukul 10:00.',        'appointment_confirmed',  'push', false, '2024-03-21 08:00:00', NOW(), NOW());
 
 
--- ================================================================
--- 14. ACTIVITY LOGS
--- ================================================================
+-- -- ================================================================
+-- -- 14. ACTIVITY LOGS
+-- -- ================================================================
 
-INSERT INTO activity_logs (id, user_id, action, module, description, subject_type, subject_id, ip_address, user_agent, created_at) VALUES
-(1,  9,  'register',           'auth',        'Pasien Andi Wijaya melakukan registrasi akun baru',                    'User',        9,  '192.168.1.10', 'Mozilla/5.0 Flutter App', '2024-01-10 08:00:00'),
-(2,  9,  'login',              'auth',        'Pasien Andi Wijaya login ke aplikasi mobile',                          'User',        9,  '192.168.1.10', 'Mozilla/5.0 Flutter App', '2024-02-24 08:55:00'),
-(3,  9,  'create_appointment', 'appointment', 'Pasien Andi Wijaya membuat janji temu dengan dr. Budi Santoso',        'Appointment', 1,  '192.168.1.10', 'Mozilla/5.0 Flutter App', '2024-02-24 09:00:00'),
-(4,  9,  'payment',            'payment',     'Pasien Andi Wijaya melakukan pembayaran INV-20240301-001',             'Payment',     1,  '192.168.1.10', 'Mozilla/5.0 Flutter App', '2024-02-24 09:30:00'),
-(5,  3,  'login',              'auth',        'Dokter Budi Santoso login ke Web Dokter',                              'User',        3,  '192.168.1.20', 'Mozilla/5.0 Chrome/120',  '2024-02-25 09:55:00'),
-(6,  3,  'confirm_appointment','appointment', 'Dokter Budi Santoso mengkonfirmasi janji temu pasien Andi Wijaya',     'Appointment', 1,  '192.168.1.20', 'Mozilla/5.0 Chrome/120',  '2024-02-25 10:00:00'),
-(7,  3,  'upload_fundus',      'examination', 'Dokter Budi Santoso mengupload fundus image untuk pasien Andi Wijaya', 'FundusImage', 1,  '192.168.1.20', 'Mozilla/5.0 Chrome/120',  '2024-03-01 08:15:00'),
-(8,  3,  'add_diagnosis',      'examination', 'Dokter Budi Santoso mengisi diagnosis untuk EXM-20240301-001',         'Examination', 1,  '192.168.1.20', 'Mozilla/5.0 Chrome/120',  '2024-03-01 08:45:00'),
-(9,  1,  'login',              'auth',        'Admin login ke Web Admin',                                             'User',        1,  '192.168.1.30', 'Mozilla/5.0 Chrome/120',  '2024-03-01 07:55:00'),
-(10, 1,  'create_doctor',      'admin',       'Admin membuat akun dokter baru: dr. Ratna Sari',                       'User',        8,  '192.168.1.30', 'Mozilla/5.0 Chrome/120',  '2024-02-01 09:00:00'),
-(11, 1,  'activate_ml_model',  'ml',          'Admin mengaktifkan model ML versi v2.1.0',                             'MLModel',     4,  '192.168.1.30', 'Mozilla/5.0 Chrome/120',  '2024-09-01 08:00:00'),
-(12, 5,  'reject_appointment', 'appointment', 'Dokter Ahmad Fauzi menolak janji temu pasien Cahyo Nugroho',           'Appointment', 12, '192.168.1.25', 'Mozilla/5.0 Chrome/120',  '2024-03-10 09:00:00'),
-(13, 10, 'login',              'auth',        'Pasien Bela Puspita login ke aplikasi mobile',                         'User',        10, '192.168.1.11', 'Mozilla/5.0 Flutter App', '2024-02-25 07:55:00'),
-(14, 10, 'create_appointment', 'appointment', 'Pasien Bela Puspita membuat janji temu dengan dr. Sari Dewi',          'Appointment', 2,  '192.168.1.11', 'Mozilla/5.0 Flutter App', '2024-02-25 08:00:00'),
-(15, 1,  'toggle_user_status', 'admin',       'Admin menonaktifkan akun user ID 20 (spam account)',                   'User',        20, '192.168.1.30', 'Mozilla/5.0 Chrome/120',  '2024-03-05 10:00:00');
+-- INSERT INTO activity_logs (id, user_id, action, module, description, subject_type, subject_id, ip_address, user_agent, created_at) VALUES
+-- (1,  9,  'register',           'auth',        'Pasien Andi Wijaya melakukan registrasi akun baru',                    'User',        9,  '192.168.1.10', 'Mozilla/5.0 Flutter App', '2024-01-10 08:00:00'),
+-- (2,  9,  'login',              'auth',        'Pasien Andi Wijaya login ke aplikasi mobile',                          'User',        9,  '192.168.1.10', 'Mozilla/5.0 Flutter App', '2024-02-24 08:55:00'),
+-- (3,  9,  'create_appointment', 'appointment', 'Pasien Andi Wijaya membuat janji temu dengan dr. Budi Santoso',        'Appointment', 1,  '192.168.1.10', 'Mozilla/5.0 Flutter App', '2024-02-24 09:00:00'),
+-- (4,  9,  'payment',            'payment',     'Pasien Andi Wijaya melakukan pembayaran INV-20240301-001',             'Payment',     1,  '192.168.1.10', 'Mozilla/5.0 Flutter App', '2024-02-24 09:30:00'),
+-- (5,  3,  'login',              'auth',        'Dokter Budi Santoso login ke Web Dokter',                              'User',        3,  '192.168.1.20', 'Mozilla/5.0 Chrome/120',  '2024-02-25 09:55:00'),
+-- (6,  3,  'confirm_appointment','appointment', 'Dokter Budi Santoso mengkonfirmasi janji temu pasien Andi Wijaya',     'Appointment', 1,  '192.168.1.20', 'Mozilla/5.0 Chrome/120',  '2024-02-25 10:00:00'),
+-- (7,  3,  'upload_fundus',      'examination', 'Dokter Budi Santoso mengupload fundus image untuk pasien Andi Wijaya', 'FundusImage', 1,  '192.168.1.20', 'Mozilla/5.0 Chrome/120',  '2024-03-01 08:15:00'),
+-- (8,  3,  'add_diagnosis',      'examination', 'Dokter Budi Santoso mengisi diagnosis untuk EXM-20240301-001',         'Examination', 1,  '192.168.1.20', 'Mozilla/5.0 Chrome/120',  '2024-03-01 08:45:00'),
+-- (9,  1,  'login',              'auth',        'Admin login ke Web Admin',                                             'User',        1,  '192.168.1.30', 'Mozilla/5.0 Chrome/120',  '2024-03-01 07:55:00'),
+-- (10, 1,  'create_doctor',      'admin',       'Admin membuat akun dokter baru: dr. Ratna Sari',                       'User',        8,  '192.168.1.30', 'Mozilla/5.0 Chrome/120',  '2024-02-01 09:00:00'),
+-- (11, 1,  'activate_ml_model',  'ml',          'Admin mengaktifkan model ML versi v2.1.0',                             'MLModel',     4,  '192.168.1.30', 'Mozilla/5.0 Chrome/120',  '2024-09-01 08:00:00'),
+-- (12, 5,  'reject_appointment', 'appointment', 'Dokter Ahmad Fauzi menolak janji temu pasien Cahyo Nugroho',           'Appointment', 12, '192.168.1.25', 'Mozilla/5.0 Chrome/120',  '2024-03-10 09:00:00'),
+-- (13, 10, 'login',              'auth',        'Pasien Bela Puspita login ke aplikasi mobile',                         'User',        10, '192.168.1.11', 'Mozilla/5.0 Flutter App', '2024-02-25 07:55:00'),
+-- (14, 10, 'create_appointment', 'appointment', 'Pasien Bela Puspita membuat janji temu dengan dr. Sari Dewi',          'Appointment', 2,  '192.168.1.11', 'Mozilla/5.0 Flutter App', '2024-02-25 08:00:00'),
+-- (15, 1,  'toggle_user_status', 'admin',       'Admin menonaktifkan akun user ID 20 (spam account)',                   'User',        20, '192.168.1.30', 'Mozilla/5.0 Chrome/120',  '2024-03-05 10:00:00');
 
 
 -- ================================================================

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
-class LogoutController extends Controller
+class LogoutLabsController extends Controller
 {
     public function logout(Request $request): JsonResponse
     {

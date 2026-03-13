@@ -7,8 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\UserResource;
+use App\Http\Resources\ActivityLogResource;
+use App\Models\User;
 
-class LoginController extends Controller
+class LoginLabsController extends Controller
 {
     public function login(Request $request): JsonResponse
     {
@@ -27,13 +29,14 @@ class LoginController extends Controller
             }
 
             $user = Auth::user();
+            $user->load('admin');
 
-            if ($user->role !== 'adminops') {
+            if (!$user->admin || !in_array($user->admin->admin_level , ['adminops', 'superadmin'])) {
                 Auth::logout();
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Access denied. Staff only.'
+                    'message' => 'Access denied. Akun Anda tidak memiliki otoritas portal ini.'
                 ], 403);
             }
 
@@ -54,7 +57,7 @@ class LoginController extends Controller
                 'message' => 'Staff login successful',
                 'data' => [
                     'user' => new UserResource(
-                        $user->load(['adminops'])
+                        $user->load('admin')
                     ),
                     'token' => $token,
                     'token_type' => 'Bearer'

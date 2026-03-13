@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\ActivityLogResource;
 
 class AdminResource extends JsonResource
 {
@@ -33,18 +34,18 @@ class AdminResource extends JsonResource
             $this->mergeWhen(
                 $request->user()?->isAdmin() && $this->admin_level === 'super_admin',
                 [
-                    'recent_activities' => $this->when(
-                        $this->relationLoaded('user') && $this->user->relationLoaded('activityLogs'),
-                        ActivityLogResource::collection($this->user->activityLogs->take(5))
-                    ),
+                    // 'recent_activities' => $this->when(
+                    //     $this->relationLoaded('user') && $this->user->relationLoaded('activityLogs'),
+                    //     // ActivityLogResource::collection($this->user->activityLogs->take(5))
+                    // ),
                 ]
             ),
             
             // Field khusus (hanya untuk super admin)
             $this->mergeWhen(
-                $request->user()?->isAdmin() && $request->user()?->admin_level === 'super_admin',
+                $request->user()?->admin?->admin_level === 'super_admin' && $request->user()?->admin_level === 'super_admin',
                 [
-                    'permissions' => $this->getAllPermissions(), // Jika pakai Spatie Permission
+                    // 'permissions' => $this->getAllPermissions(), // Jika pakai Spatie Permission
                     'deleted_at' => $this->deleted_at?->format('Y-m-d H:i:s'),
                 ]
             ),

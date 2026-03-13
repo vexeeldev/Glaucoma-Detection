@@ -27,7 +27,6 @@ class RegisterAdminController extends Controller
             'gender' => 'nullable|in:male,female',
             'city' => 'nullable|string|max:80',
             'province' => 'nullable|string|max:80',
-
             'admin_level' => 'nullable|string|max:50'
         ]);
 
