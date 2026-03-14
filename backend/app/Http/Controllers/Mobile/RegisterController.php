@@ -26,7 +26,7 @@ class RegisterController extends Controller
 
             'phone' => 'nullable|string|max:20',
 
-            'nik' => 'nullable|string|max:16|unique:users,nik',
+            'nik' => 'required_if:role,patient|string|size:16|unique:users,nik',
             'username' => 'nullable|string|max:50|unique:users,username',
 
             'date_of_birth' => 'nullable|date',
