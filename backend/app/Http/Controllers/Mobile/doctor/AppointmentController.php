@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers\Mobile\doctor;
-
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,7 +9,7 @@ class ProfileController extends Controller
 {
     public function show()
     {
-        return response()->json(Auth::user()->load('patient'));
+        return response()->json(Auth::user()->load('patient')); Route::post('/profile/{id}'. [ProfileController::class, "show"]);
     }
 
     public function update(Request $request)

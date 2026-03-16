@@ -15,13 +15,27 @@ class Patient extends Model
     // Kolom yang boleh diisi (mass assignable)
     protected $fillable = [
         'user_id',
+        'nik',
         'date_of_birth',
         'gender',
         'address',
         'city',
-        'phone_number',
+        'province',
+        'postal_code',
+        'emergency_contact_name',
+        'emergency_contact_phone',
+        'emergency_contact_relation',
         'blood_type',
-        'medical_history'
+        'medical_history',
+        'current_medications',
+        'allergies',
+        'insurance_provider',
+        'insurance_number',
+        'religion',
+        'nationality'
+    ];
+    protected $casts = [
+        'date_of_birth' => 'date'
     ];
 
     /**
