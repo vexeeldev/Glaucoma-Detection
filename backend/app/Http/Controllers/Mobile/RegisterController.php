@@ -119,6 +119,7 @@ class RegisterController extends Controller
 
                     'insurance_provider' => $validated['insurance_provider'] ?? null,
                     'insurance_number' => $validated['insurance_number'] ?? null,
+                
                 ]);
 
             }
