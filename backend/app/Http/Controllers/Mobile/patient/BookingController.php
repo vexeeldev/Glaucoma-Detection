@@ -13,6 +13,8 @@ class BookingController extends Controller
     // GET: /api/patient/booking?role=patient&user_id=1
     public function index(Request $request)
     {
+        $user = auth()->user(); // Ambil user yang login
+        
         $query = DB::table('appointments')
             ->join('doctors', 'appointments.doctor_id', '=', 'doctors.id')
             ->join('users as doctor_user', 'doctors.user_id', '=', 'doctor_user.id')
@@ -24,13 +26,19 @@ class BookingController extends Controller
                 'patient_user.name as patient_name'
             );
 
-        // Simulasi filter role
-        if ($request->role == 'patient') {
-            $query->where('appointments.patient_id', $request->patient_id);
-        } elseif ($request->role == 'doctor') {
-            $query->where('appointments.doctor_id', $request->doctor_id);
+        // Filter OTOMATIS berdasarkan Role yang login
+        if ($user->role == 'patient') {
+            // Cari ID patient yang terhubung dengan User ini
+            $patientId = DB::table('patients')->where('user_id', $user->id)->value('id');
+            $query->where('appointments.patient_id', $patientId);
+
+        } elseif ($user->role == 'doctor') {
+            // Cari ID doctor yang terhubung dengan User ini
+            $doctorId = DB::table('doctors')->where('user_id', $user->id)->value('id');
+            $query->where('appointments.doctor_id', $doctorId);
         }
 
+        // Filter tambahan (Status & Tanggal) tetep bisa dipake
         if ($request->status) $query->where('appointment_status', $request->status);
         if ($request->date) $query->where('appointment_date', $request->date);
 

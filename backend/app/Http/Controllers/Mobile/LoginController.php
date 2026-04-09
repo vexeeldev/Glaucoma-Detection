@@ -16,7 +16,7 @@ class LoginController extends Controller
             'email' => 'required|email',
             'password' => 'required|string',
         ]);
-
+        
         try {
 
             if (!Auth::attempt($validated)) {

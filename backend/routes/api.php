@@ -77,7 +77,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // 2. Modul Booking (Janji Temu)
         Route::prefix('booking')->group(function () {
-            Route::get('/', [BookingController::class, 'index']);
             Route::post('/', [BookingController::class, 'store']);
             Route::get('/{id}', [BookingController::class, 'show']);
             Route::delete('/{id}', [BookingController::class, 'destroy']);
@@ -104,6 +103,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/medical-records', [ExaminationController::class, 'patientHistory']);
         Route::get('/medical-records/{id}', [ExaminationController::class, 'patientHistoryDetail']);
     });
+
+    Route::get('mobile/patient/booking', [BookingController::class, 'index']);
+    Route::get('mobile/doctor/booking', [BookingController::class, 'index']);
+
+    // ---- ROLE: DOCTOR (Mobile) ---
+    Route::prefix('mobile/doctor')->group(function () {
+        Route::prefix('booking')->group(function () {
+            Route::put('/{id}/confirm', [BookingController::class, 'confirm']);
+            Route::put('/{id}/reject', [BookingController::class, 'reject']);
+            Route::put('/{id}/complete', [BookingController::class, 'complete']);
+        });
+    });
+
 
     // --- ROLE: LABS / DOKTER ---
     Route::prefix('labs')->group(function () {
