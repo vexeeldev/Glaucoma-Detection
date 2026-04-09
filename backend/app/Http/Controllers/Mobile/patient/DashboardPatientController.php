@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use Illuminate\Support\Facades\DB;
 
-class DashboardController extends Controller
+class DashboardPatientController extends Controller
 {
     public function index()
     {

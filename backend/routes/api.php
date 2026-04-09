@@ -16,6 +16,7 @@ use App\Http\Controllers\Mobile\patient\PaymentController;
 use App\Http\Controllers\Mobile\patient\NotificationController;
 use App\Http\Controllers\Mobile\patient\DashboardPatientController;
 use App\Http\Controllers\Mobile\patient\ProfilePatientController;
+use App\Http\Controllers\Mobile\patient\ForgotPasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -65,6 +66,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DashboardPatientController::class, 'index']);
         Route::get('/profile', [ProfilePatientController::class, 'show']);
         Route::put('/profile', [ProfilePatientController::class, 'update']);
+
+        Route::get('/mobile/forgot-password', [ForgotPasswordController::class, 'reset']);
 
         // 1. Modul Dokter & Jadwal
         Route::get('/specializations', [DoctorController::class, 'specializations']);
