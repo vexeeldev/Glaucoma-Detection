@@ -265,3 +265,8 @@ CREATE TABLE activity_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
+
+
+GET /medical-records: Dipakai di halaman List/Daftar. Isinya data ringkas saja (Nama dokter, tanggal, hasil singkat) biar loading-nya cepat.
+
+GET /medical-records/{id}: Dipakai pas user klik salah satu item di list tadi. Di sini kamu bisa nampilin data yang jauh lebih detail, termasuk gambar mata (fundus) yang ukurannya besar dan saran dokter yang panjang lebar.

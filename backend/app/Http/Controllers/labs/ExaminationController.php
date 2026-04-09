@@ -121,39 +121,42 @@ class ExaminationController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
+    
+    // Fungsi ini ditaruh di dalam ExaminationController
     public function patientHistory()
     {
         try {
-            // Ambil ID pasien yang sedang login
+            // 1. Ambil ID User yang sedang login dari token Sanctum
             $userId = auth()->id();
 
-            // Cari data appointment yang milik si pasien DAN statusnya 'completed'
+            // 2. Query: Cari Janji Temu yang SUDAH SELESAI dan MILIK si User ini
             $results = Appointment::with(['doctor', 'examination.analysisResults', 'examination.fundusImage'])
                 ->whereHas('patient', function($query) use ($userId) {
-                    $query->where('user_id', $userId);
+                    $query->where('user_id', $userId); // Filter berdasarkan kepemilikan
                 })
-                ->where('appointment_status', 'completed')
+                ->where('appointment_status', 'completed') // Hanya yang sudah diperiksa
                 ->latest()
                 ->get();
 
+            // 3. Mapping data biar rapi buat Flutter
             $data = $results->map(function($app) {
                 $examination = $app->examination;
                 $analysis = $examination ? $examination->analysisResults->first() : null;
                 $fundus = $examination ? $examination->fundusImage : null;
 
+                // Normalisasi skor confidence ke persen (0-100)
                 $score = $analysis ? (float)$analysis->confidence_score : 0;
                 if ($score <= 1 && $score > 0) $score *= 100;
 
                 return [
-                    'id'            => $app->id,
-                    'doctor_name'   => $app->doctor->name ?? 'Dokter Umum',
-                    'date'          => \Carbon\Carbon::parse($app->appointment_date)->translatedFormat('d F Y'),
-                    'prediction'    => $analysis ? strtoupper($analysis->prediction) : 'NORMAL',
-                    'confidence'    => (int)$score . '%',
-                    'eye_side'      => $analysis->eye_side ?? 'Keduanya',
-                    'medical_advice' => $analysis->medical_advice ?? 'Tetap jaga kondisi kesehatan mata.',
-                    'fundus_image'  => $fundus ? $fundus->file_path : null,
+                    'appointment_id' => $app->id,
+                    'doctor_name'    => $app->doctor->name ?? 'Dokter Spesialis',
+                    'date'           => \Carbon\Carbon::parse($app->appointment_date)->translatedFormat('d F Y'),
+                    'prediction'     => $analysis ? strtoupper($analysis->prediction) : 'NORMAL',
+                    'confidence'     => (int)$score . '%',
+                    'eye_side'       => $analysis->eye_side ?? 'Keduanya',
+                    'doctor_notes'   => $analysis->medical_advice ?? 'Tetap jaga kesehatan mata Anda.',
+                    'image_url'      => $fundus ? $fundus->file_path : null, // Buat nampilin foto mata di Flutter
                 ];
             });
 
@@ -163,8 +166,58 @@ class ExaminationController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function patientHistoryDetail($id)
+    {
+        try {
+            $userId = auth()->id();
+
+            // Cari detail examination berdasarkan ID Appointment
+            // Pastikan appointment tersebut benar milik si user yang login
+            $app = Appointment::with(['doctor', 'examination.analysisResults', 'examination.fundusImage'])
+                ->whereHas('patient', function($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                })
+                ->where('id', $id)
+                ->where('appointment_status', 'completed')
+                ->first();
+
+            if (!$app) {
+                return response()->json(['message' => 'Data pemeriksaan tidak ditemukan'], 404);
+            }
+
+            $examination = $app->examination;
+            $analysis = $examination ? $examination->analysisResults->first() : null;
+            $fundus = $examination ? $examination->fundusImage : null;
+
+            $score = $analysis ? (float)$analysis->confidence_score : 0;
+            if ($score <= 1 && $score > 0) $score *= 100;
+
+            return response()->json([
+                'status' => 'success',
+                'data'   => [
+                    'id'            => $app->id,
+                    'invoice'       => $app->payment->invoice_number ?? '-',
+                    'doctor_name'   => $app->doctor->name ?? 'Dokter Spesialis',
+                    'date'          => \Carbon\Carbon::parse($app->appointment_date)->translatedFormat('l, d F Y'),
+                    'time'          => date('H:i', strtotime($app->appointment_time)) . ' WIB',
+                    'prediction'    => $analysis ? strtoupper($analysis->prediction) : 'NORMAL',
+                    'confidence'    => (int)$score . '%',
+                    'eye_side'      => $analysis->eye_side ?? 'Keduanya',
+                    'medical_advice' => $analysis->medical_advice ?? 'Tidak ada catatan tambahan.',
+                    'image_url'     => $fundus ? $fundus->file_path : null,
+                    'created_at'    => $app->created_at->format('d/m/Y H:i')
+                ]
+            ]);
+
+        } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-        
 }

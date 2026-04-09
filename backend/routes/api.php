@@ -14,6 +14,8 @@ use App\Http\Controllers\Mobile\patient\DoctorController;
 use App\Http\Controllers\Mobile\patient\BookingController;
 use App\Http\Controllers\Mobile\patient\PaymentController;
 use App\Http\Controllers\Mobile\patient\NotificationController;
+use App\Http\Controllers\Mobile\patient\DashboardPatientController;
+use App\Http\Controllers\Mobile\patient\ProfilePatientController;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,6 +61,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- ROLE: PATIENT (Mobile) ---
     Route::prefix('mobile/patient')->group(function () {
         
+        //buat dashboard dan profile patient di aplikasi mobile
+        Route::get('/dashboard', [DashboardPatientController::class, 'index']);
+        Route::get('/profile', [ProfilePatientController::class, 'show']);
+        Route::put('/profile', [ProfilePatientController::class, 'update']);
+
         // 1. Modul Dokter & Jadwal
         Route::get('/specializations', [DoctorController::class, 'specializations']);
         Route::get('/doctors', [DoctorController::class, 'index']);
@@ -92,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // 5. Modul Medical Records (Hasil Diagnosa AI untuk Pasien)
         Route::get('/medical-records', [ExaminationController::class, 'patientHistory']);
+        Route::get('/medical-records/{id}', [ExaminationController::class, 'patientHistoryDetail']);
     });
 
     // --- ROLE: LABS / DOKTER ---
