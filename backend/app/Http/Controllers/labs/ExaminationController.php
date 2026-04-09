@@ -121,5 +121,50 @@ class ExaminationController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    public function patientHistory()
+    {
+        try {
+            // Ambil ID pasien yang sedang login
+            $userId = auth()->id();
+
+            // Cari data appointment yang milik si pasien DAN statusnya 'completed'
+            $results = Appointment::with(['doctor', 'examination.analysisResults', 'examination.fundusImage'])
+                ->whereHas('patient', function($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                })
+                ->where('appointment_status', 'completed')
+                ->latest()
+                ->get();
+
+            $data = $results->map(function($app) {
+                $examination = $app->examination;
+                $analysis = $examination ? $examination->analysisResults->first() : null;
+                $fundus = $examination ? $examination->fundusImage : null;
+
+                $score = $analysis ? (float)$analysis->confidence_score : 0;
+                if ($score <= 1 && $score > 0) $score *= 100;
+
+                return [
+                    'id'            => $app->id,
+                    'doctor_name'   => $app->doctor->name ?? 'Dokter Umum',
+                    'date'          => \Carbon\Carbon::parse($app->appointment_date)->translatedFormat('d F Y'),
+                    'prediction'    => $analysis ? strtoupper($analysis->prediction) : 'NORMAL',
+                    'confidence'    => (int)$score . '%',
+                    'eye_side'      => $analysis->eye_side ?? 'Keduanya',
+                    'medical_advice' => $analysis->medical_advice ?? 'Tetap jaga kondisi kesehatan mata.',
+                    'fundus_image'  => $fundus ? $fundus->file_path : null,
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data'   => $data
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
         
 }

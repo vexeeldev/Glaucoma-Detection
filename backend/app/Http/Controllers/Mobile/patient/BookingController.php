@@ -55,38 +55,87 @@ class BookingController extends Controller
     }
 
     // 3. STORE (Buat Booking + Payment)
-    public function store(Request $request)
+   public function store(Request $request)
     {
-        return DB::transaction(function () use ($request) {
-            // Lock Schedule untuk Race Condition
-            $slot = DB::table('doctor_schedules')
-                ->where('doctor_id', $request->doctor_id)
-                ->where('start_time', $request->appointment_time)
-                ->lockForUpdate()->first();
+        // 1. Validasi input tambahan untuk 'package_type'
+        $request->validate([
+            'patient_id'        => 'required|exists:patients,id',
+            'doctor_id'         => 'required|exists:doctors,id',
+            'appointment_date'  => 'required|date|after_or_equal:today',
+            'appointment_time'  => 'required',
+            'package_type'      => 'required|in:basic,screening,complete', // basic, screening, atau complete
+        ]);
 
-            // Insert Appointment
-            $bookingId = DB::table('appointments')->insertGetId([
-                'patient_id' => $request->patient_id,
-                'doctor_id' => $request->doctor_id,
-                'appointment_date' => $request->appointment_date,
-                'appointment_time' => $request->appointment_time,
-                'patient_complaint' => $request->patient_complaint,
-                'appointment_status' => 'pending_payment',
-                'created_at' => now()
-            ]);
+        try {
+            return DB::transaction(function () use ($request) {
+                // 2. Lock Schedule untuk mencegah Race Condition (Double Booking)
+                $slot = DB::table('doctor_schedules')
+                    ->where('doctor_id', $request->doctor_id)
+                    ->where('start_time', $request->appointment_time)
+                    ->where('day_of_week', strtolower(date('l', strtotime($request->appointment_date))))
+                    ->lockForUpdate()
+                    ->first();
 
-            // OTOMATIS: Buat Record Payment (Unpaid)
-            $invoice = 'INV-' . strtoupper(Str::random(10));
-            DB::table('payments')->insert([
-                'appointment_id' => $bookingId,
-                'invoice_number' => $invoice,
-                'amount' => 150000, // Misal flat dulu
-                'payment_status' => 'unpaid',
-                'created_at' => now()
-            ]);
+                if (!$slot || !$slot->is_available) {
+                    return response()->json(['message' => 'Jadwal dokter tidak ditemukan atau tidak tersedia'], 422);
+                }
 
-            return response()->json(['message' => 'Booking & Invoice dibuat', 'id' => $bookingId, 'invoice' => $invoice], 201);
-        });
+                // 3. Tentukan Biaya Paket (Berdasarkan data JEC 2026 yang kamu temukan)
+                $packagePrices = [
+                    'basic'     => 150000, // Konsultasi + Tonometri
+                    'screening' => 500000, // Dasar + GlaucoScan AI Skrining
+                    'complete'  => 1200000 // Full OCT + Perimetri
+                ];
+
+                $selectedPrice = $packagePrices[$request->package_type];
+
+                // 4. Ambil Jasa Dokter (Consultation Fee) dari tabel doctors
+                $doctor = DB::table('doctors')->where('id', $request->doctor_id)->first();
+                
+                // Total = Harga Paket + Biaya Dokter (Opsional, tergantung kebijakan RS kamu)
+                $totalAmount = $selectedPrice + ($doctor->consultation_fee ?? 0);
+
+                // 5. Insert Appointment
+                $bookingId = DB::table('appointments')->insertGetId([
+                    'patient_id'         => $request->patient_id,
+                    'doctor_id'          => $request->doctor_id,
+                    'appointment_date'   => $request->appointment_date,
+                    'appointment_time'   => $request->appointment_time,
+                    'patient_complaint'  => $request->patient_complaint,
+                    'appointment_status' => 'pending_payment', // Menunggu pembayaran
+                    'created_at'         => now(),
+                    'updated_at'         => now()
+                ]);
+
+                // 6. OTOMATIS: Buat Record Payment (Invoice)
+                $invoiceNumber = 'INV-' . strtoupper(Str::random(10));
+                DB::table('payments')->insert([
+                    'appointment_id' => $bookingId,
+                    'invoice_number' => $invoiceNumber,
+                    'amount'         => $totalAmount, // Nilai dinamis hasil hitungan di atas
+                    'payment_status' => 'unpaid',
+                    'created_at'     => now(),
+                    'updated_at'     => now()
+                ]);
+
+                return response()->json([
+                    'status'  => 'success',
+                    'message' => 'Booking berhasil! Invoice telah dibuat.',
+                    'data'    => [
+                        'booking_id'   => $bookingId,
+                        'invoice'      => $invoiceNumber,
+                        'package'      => $request->package_type,
+                        'total_amount' => $totalAmount
+                    ]
+                ], 201);
+            });
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal membuat booking: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // 4. CANCEL (Oleh Pasien)
