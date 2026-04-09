@@ -3,19 +3,21 @@ import 'package:flutter/material.dart';
 class AppointmentModel {
   final String id;
   final String patientId;
+  final String? patientName; // Tambahkan ini
   final String doctorId;
   final String doctorName;
   final DateTime date;
   final String time;
   final String complaint;
-  final String status; // pending, paid, confirmed, rejected, completed, cancelled
-  final String? rejectionReason;
+  String status; // Diubah dari final menjadi mutable
+  String? rejectionReason; // Diubah dari final menjadi mutable
   final String paymentMethod;
   final DateTime createdAt;
 
   AppointmentModel({
     required this.id,
     required this.patientId,
+    this.patientName, // Tambahkan ini
     required this.doctorId,
     required this.doctorName,
     required this.date,
@@ -45,17 +47,17 @@ class AppointmentModel {
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
     return AppointmentModel(
-      id: json['id'],
-      patientId: json['patientId'],
-      doctorId: json['doctorId'],
-      doctorName: json['doctorName'],
-      date: DateTime.parse(json['date']),
-      time: json['time'],
-      complaint: json['complaint'],
+      id: json['id'].toString(),
+      patientId: json['patient_id'].toString(),
+      doctorId: json['doctor_id'].toString(),
+      doctorName: json['doctor_name'],
+      date: DateTime.parse(json['appointment_date']),
+      time: json['time_slot'],
+      complaint: json['complaint'] ?? '',
       status: json['status'],
-      rejectionReason: json['rejectionReason'],
-      paymentMethod: json['paymentMethod'],
-      createdAt: DateTime.parse(json['createdAt']),
+      rejectionReason: json['rejection_reason'],
+      paymentMethod: json['payment_method'],
+      createdAt: DateTime.parse(json['created_at']),
     );
   }
 

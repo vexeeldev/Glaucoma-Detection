@@ -9,7 +9,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.0
+
+  # Network & API
+  http: ^1.1.0
+  dio: ^5.4.0
+
+  # Storage
+  shared_preferences: ^2.2.2
 
   # UI
   google_fonts: ^6.1.0
@@ -21,12 +27,11 @@ dependencies:
 
   # Utils
   intl: ^0.18.1
-  shared_preferences: ^2.2.2
   image_picker: ^1.0.5
   url_launcher: ^6.2.1
 
-  # Local JSON
-  dio: ^5.4.0
+  # Icons
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:

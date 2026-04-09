@@ -6,7 +6,6 @@ import '../../models/appointment_model.dart';
 import '../../models/notification_model.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/notification_provider.dart';
-import '../../services/mock_data_service.dart';
 import 'examination_detail_dokter_screen.dart';
 
 class AppointmentRequestsScreen extends StatefulWidget {
@@ -78,13 +77,6 @@ class _AppointmentRequestsScreenState extends State<AppointmentRequestsScreen>
     }
   }
 
-  // Method untuk mendapatkan nama pasien
-  Future<String> _getPatientName(String patientId) async {
-    final mockDataService = MockDataService();
-    final user = mockDataService.getUserById(patientId);
-    return user?.name ?? 'Pasien $patientId';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,13 +144,9 @@ class _AppointmentRequestsScreenState extends State<AppointmentRequestsScreen>
           itemCount: appointments.length,
           itemBuilder: (context, index) {
             final appointment = appointments[index];
-            return FutureBuilder<String>(
-              future: _getPatientName(appointment.patientId),
-              builder: (context, snapshot) {
-                final patientName = snapshot.data ?? 'Pasien ${appointment.patientId}';
-                return _buildAppointmentCard(appointment, status, patientName);
-              },
-            );
+            // Get patient name from appointment data or use default
+            final patientName = appointment.patientName ?? 'Pasien ${appointment.patientId}';
+            return _buildAppointmentCard(appointment, status, patientName);
           },
         );
       },
@@ -440,7 +428,6 @@ class _AppointmentRequestsScreenState extends State<AppointmentRequestsScreen>
   }
 
   void _viewPatientDetail(AppointmentModel appointment, String patientName) {
-    // Navigate to patient detail
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -471,7 +458,6 @@ class _AppointmentRequestsScreenState extends State<AppointmentRequestsScreen>
   }
 
   void _startExamination(AppointmentModel appointment) {
-    // Navigate to examination screen
     Navigator.push(
       context,
       MaterialPageRoute(

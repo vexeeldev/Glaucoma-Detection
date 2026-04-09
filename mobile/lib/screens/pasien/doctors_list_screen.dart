@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../models/doctor_model.dart';
-import '../../services/mock_data_service.dart';
+import '../../providers/doctor_provider.dart';
 import 'book_appointment_screen.dart';
 
 class DoctorsListScreen extends StatefulWidget {
@@ -12,11 +13,9 @@ class DoctorsListScreen extends StatefulWidget {
 }
 
 class _DoctorsListScreenState extends State<DoctorsListScreen> {
-  final MockDataService _mockDataService = MockDataService();
-  List<DoctorModel> _doctors = [];
-  List<DoctorModel> _filteredDoctors = [];
   final TextEditingController _searchController = TextEditingController();
   String _selectedSpecialization = 'Semua';
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -25,30 +24,40 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
     _searchController.addListener(_filterDoctors);
   }
 
-  void _loadDoctors() {
-    setState(() {
-      _doctors = _mockDataService.getDoctors();
-      _filteredDoctors = _doctors;
-    });
+  Future<void> _loadDoctors() async {
+    final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+    await doctorProvider.loadDoctors();
+    await doctorProvider.loadSpecializations();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _filterDoctors() {
-    String query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredDoctors = _doctors.where((doctor) {
-        bool matchesSearch = doctor.name.toLowerCase().contains(query) ||
-            doctor.specialization.toLowerCase().contains(query);
-        bool matchesSpecialization = _selectedSpecialization == 'Semua' ||
-            doctor.specialization.contains(_selectedSpecialization);
-        return matchesSearch && matchesSpecialization;
-      }).toList();
+      // Filtering is handled by the provider's getter
     });
   }
 
   List<String> get specializations {
-    Set<String> specs = {'Semua'};
-    specs.addAll(_doctors.map((d) => d.specialization).toSet());
-    return specs.toList();
+    final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+    return ['Semua', ...doctorProvider.specializations];
+  }
+
+  List<DoctorModel> get filteredDoctors {
+    final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+    String query = _searchController.text.toLowerCase();
+
+    return doctorProvider.doctors.where((doctor) {
+      bool matchesSearch = doctor.name.toLowerCase().contains(query) ||
+          doctor.specialization.toLowerCase().contains(query);
+      bool matchesSpecialization = _selectedSpecialization == 'Semua' ||
+          doctor.specialization.contains(_selectedSpecialization);
+      return matchesSearch && matchesSpecialization;
+    }).toList();
   }
 
   @override
@@ -89,28 +98,35 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
                 const SizedBox(height: 12),
 
                 // Specialization Filter
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: specializations.map((spec) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(spec),
-                          selected: _selectedSpecialization == spec,
-                          onSelected: (selected) {
-                            setState(() {
-                              _selectedSpecialization = spec;
-                              _filterDoctors();
-                            });
-                          },
-                          backgroundColor: Colors.grey[100],
-                          selectedColor: const Color(0xFF4A90E2).withValues(alpha: 0.2),
-                          checkmarkColor: const Color(0xFF4A90E2),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                Consumer<DoctorProvider>(
+                  builder: (context, provider, child) {
+                    if (provider.specializations.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: specializations.map((spec) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(spec),
+                              selected: _selectedSpecialization == spec,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedSpecialization = spec;
+                                });
+                              },
+                              backgroundColor: Colors.grey[100],
+                              selectedColor: const Color(0xFF4A90E2).withValues(alpha: 0.2),
+                              checkmarkColor: const Color(0xFF4A90E2),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -118,7 +134,9 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
 
           // Doctors List
           Expanded(
-            child: _filteredDoctors.isEmpty
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredDoctors.isEmpty
                 ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -141,9 +159,9 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
             )
                 : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _filteredDoctors.length,
+              itemCount: filteredDoctors.length,
               itemBuilder: (context, index) {
-                final doctor = _filteredDoctors[index];
+                final doctor = filteredDoctors[index];
                 return _buildDoctorCard(doctor);
               },
             ),
@@ -197,7 +215,7 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
                       child: doctor.photoUrl.isNotEmpty
                           ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
+                        child: Image.network(
                           doctor.photoUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {

@@ -1,20 +1,28 @@
+// lib/models/user_model.dart
+
 class UserModel {
   final String id;
   final String name;
   final String email;
   final String password;
-  final String role; // 'pasien' or 'dokter'
+  final String role;
   final String? phoneNumber;
   final String? address;
 
-  // Medical data
+  // Data Medis (dari 'patient')
   final String? bloodType;
   final String? medicalHistory;
   final String? allergies;
-
-  // Insurance data
   final String? insuranceName;
   final String? insurancePolicyNumber;
+
+  // Data Pribadi Tambahan
+  final String? nik;
+  final String? username;
+  final String? dateOfBirth;
+  final String? gender;
+  final String? city;
+  final String? province;
 
   UserModel({
     required this.id,
@@ -29,8 +37,15 @@ class UserModel {
     this.allergies,
     this.insuranceName,
     this.insurancePolicyNumber,
+    this.nik,
+    this.username,
+    this.dateOfBirth,
+    this.gender,
+    this.city,
+    this.province,
   });
 
+  // Jangan lupa update toJson dan fromJson jika perlu
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -45,75 +60,35 @@ class UserModel {
       'allergies': allergies,
       'insuranceName': insuranceName,
       'insurancePolicyNumber': insurancePolicyNumber,
+      'nik': nik,
+      'username': username,
+      'dateOfBirth': dateOfBirth,
+      'gender': gender,
+      'city': city,
+      'province': province,
     };
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
+      id: json['id'].toString(),
       name: json['name'],
       email: json['email'],
-      password: json['password'],
-      role: json['role'],
-      phoneNumber: json['phoneNumber'],
+      password: json['password'] ?? '',
+      role: json['role'] == 'patient' ? 'pasien' : json['role'],
+      phoneNumber: json['phone'] ?? json['phoneNumber'],
       address: json['address'],
-      bloodType: json['bloodType'],
-      medicalHistory: json['medicalHistory'],
+      bloodType: json['bloodType'] ?? json['blood_type'],
+      medicalHistory: json['medicalHistory'] ?? json['medical_history'],
       allergies: json['allergies'],
-      insuranceName: json['insuranceName'],
-      insurancePolicyNumber: json['insurancePolicyNumber'],
-    );
-  }
-}
-
-class DoctorModel {
-  final String id;
-  final String name;
-  final String specialization;
-  final String photoUrl;
-  final String schedule;
-  final int availableQuota;
-  final bool isAvailable;
-  final String? about;
-  final int experience;
-
-  DoctorModel({
-    required this.id,
-    required this.name,
-    required this.specialization,
-    required this.photoUrl,
-    required this.schedule,
-    required this.availableQuota,
-    required this.isAvailable,
-    this.about,
-    required this.experience,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'specialization': specialization,
-      'photoUrl': photoUrl,
-      'schedule': schedule,
-      'availableQuota': availableQuota,
-      'isAvailable': isAvailable,
-      'about': about,
-      'experience': experience,
-    };
-  }
-
-  factory DoctorModel.fromJson(Map<String, dynamic> json) {
-    return DoctorModel(
-      id: json['id'],
-      name: json['name'],
-      specialization: json['specialization'],
-      photoUrl: json['photoUrl'],
-      schedule: json['schedule'],
-      availableQuota: json['availableQuota'],
-      isAvailable: json['isAvailable'],
-      about: json['about'],
-      experience: json['experience'],
+      insuranceName: json['insuranceName'] ?? json['insurance_provider'],
+      insurancePolicyNumber: json['insurancePolicyNumber'] ?? json['insurance_number'],
+      nik: json['nik'],
+      username: json['username'],
+      dateOfBirth: json['dateOfBirth'] ?? json['date_of_birth'],
+      gender: json['gender'],
+      city: json['city'],
+      province: json['province'],
     );
   }
 }

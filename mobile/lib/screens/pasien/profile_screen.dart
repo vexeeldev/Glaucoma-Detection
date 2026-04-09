@@ -15,6 +15,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
+  bool _isLoading = true;
+  bool _isLoggingOut = false;
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
@@ -27,8 +29,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    _initializeControllers(user!);
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.loadProfile(); // Load dari API
+
+    final user = authProvider.currentUser;
+    if (user != null) {
+      _initializeControllers(user);
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _initializeControllers(UserModel user) {
@@ -74,24 +95,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       insurancePolicyNumber: _insurancePolicyController.text.isEmpty ? null : _insurancePolicyController.text,
     );
 
-    await authProvider.updateProfile(updatedUser);
-
-    setState(() {
-      _isEditing = false;
-    });
+    final success = await authProvider.updateProfile(updatedUser);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profil berhasil diperbarui'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (success) {
+        setState(() {
+          _isEditing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profil berhasil diperbarui'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memperbarui profil'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  void _logout() {
-    showDialog(
+  Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -99,22 +128,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           content: const Text('Apakah Anda yakin ingin logout?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: () {
-                final authProvider = Provider.of<AuthProvider>(
-                  context,
-                  listen: false,
-                );
-                authProvider.logout();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
-                );
-              },
+              onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
@@ -125,11 +143,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+
+    if (shouldLogout == true && mounted) {
+      setState(() {
+        _isLoggingOut = true;
+      });
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.logout();
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context).currentUser!;
+    final user = Provider.of<AuthProvider>(context).currentUser;
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (user == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Gagal memuat profil',
+                style: GoogleFonts.poppins(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadProfile,
+                child: const Text('Coba Lagi'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -138,7 +204,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         actions: [
-          if (!_isEditing)
+          if (!_isEditing && !_isLoggingOut)
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
@@ -147,159 +213,165 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 });
               },
             )
-          else
+          else if (_isEditing && !_isLoggingOut)
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveProfile,
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Profile Picture
-            Center(
-              child: Stack(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 50,
-                      color: Color(0xFF4A90E2),
-                    ),
-                  ),
-                  if (_isEditing)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF4A90E2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 16,
-                        ),
+      body: _isLoggingOut
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+        onRefresh: _loadProfile,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // Profile Picture
+              Center(
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        size: 50,
+                        color: Color(0xFF4A90E2),
                       ),
                     ),
+                    if (_isEditing)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF4A90E2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Email (non-editable)
+              Text(
+                user.email,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Personal Information Section
+              _buildSection(
+                title: 'Data Pribadi',
+                icon: Icons.person_outline,
+                children: [
+                  _buildEditableField(
+                    label: 'Nama Lengkap',
+                    controller: _nameController,
+                    enabled: _isEditing,
+                  ),
+                  _buildEditableField(
+                    label: 'Nomor HP',
+                    controller: _phoneController,
+                    enabled: _isEditing,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  _buildEditableField(
+                    label: 'Alamat',
+                    controller: _addressController,
+                    enabled: _isEditing,
+                    maxLines: 2,
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
 
-            // Email (non-editable)
-            Text(
-              user.email,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[600],
+              // Medical Information Section
+              _buildSection(
+                title: 'Data Medis',
+                icon: Icons.health_and_safety,
+                children: [
+                  _buildEditableField(
+                    label: 'Golongan Darah',
+                    controller: _bloodTypeController,
+                    enabled: _isEditing,
+                  ),
+                  _buildEditableField(
+                    label: 'Riwayat Penyakit',
+                    controller: _medicalHistoryController,
+                    enabled: _isEditing,
+                    maxLines: 2,
+                  ),
+                  _buildEditableField(
+                    label: 'Alergi',
+                    controller: _allergiesController,
+                    enabled: _isEditing,
+                    maxLines: 2,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 24),
 
-            // Personal Information Section
-            _buildSection(
-              title: 'Data Pribadi',
-              icon: Icons.person_outline,
-              children: [
-                _buildEditableField(
-                  label: 'Nama Lengkap',
-                  controller: _nameController,
-                  enabled: _isEditing,
+              // Insurance Information Section
+              _buildSection(
+                title: 'Data Asuransi',
+                icon: Icons.health_and_safety,
+                children: [
+                  _buildEditableField(
+                    label: 'Nama Asuransi',
+                    controller: _insuranceNameController,
+                    enabled: _isEditing,
+                  ),
+                  _buildEditableField(
+                    label: 'Nomor Polis',
+                    controller: _insurancePolicyController,
+                    enabled: _isEditing,
+                  ),
+                ],
+              ),
+
+              // Actions
+              if (!_isEditing) ...[
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.lock_reset, color: Color(0xFF4A90E2)),
+                  title: const Text('Ganti Password'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                    );
+                  },
                 ),
-                _buildEditableField(
-                  label: 'Nomor HP',
-                  controller: _phoneController,
-                  enabled: _isEditing,
-                  keyboardType: TextInputType.phone,
-                ),
-                _buildEditableField(
-                  label: 'Alamat',
-                  controller: _addressController,
-                  enabled: _isEditing,
-                  maxLines: 2,
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: _logout,
                 ),
               ],
-            ),
-
-            // Medical Information Section
-            _buildSection(
-              title: 'Data Medis',
-              icon: Icons.health_and_safety,
-              children: [
-                _buildEditableField(
-                  label: 'Golongan Darah',
-                  controller: _bloodTypeController,
-                  enabled: _isEditing,
-                ),
-                _buildEditableField(
-                  label: 'Riwayat Penyakit',
-                  controller: _medicalHistoryController,
-                  enabled: _isEditing,
-                  maxLines: 2,
-                ),
-                _buildEditableField(
-                  label: 'Alergi',
-                  controller: _allergiesController,
-                  enabled: _isEditing,
-                  maxLines: 2,
-                ),
-              ],
-            ),
-
-            // Insurance Information Section
-            _buildSection(
-              title: 'Data Asuransi',
-              icon: Icons.health_and_safety,
-              children: [
-                _buildEditableField(
-                  label: 'Nama Asuransi',
-                  controller: _insuranceNameController,
-                  enabled: _isEditing,
-                ),
-                _buildEditableField(
-                  label: 'Nomor Polis',
-                  controller: _insurancePolicyController,
-                  enabled: _isEditing,
-                ),
-              ],
-            ),
-
-            // Actions
-            if (!_isEditing) ...[
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.lock_reset, color: Color(0xFF4A90E2)),
-                title: const Text('Ganti Password'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-                  );
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text(
-                  'Logout',
-                  style: TextStyle(color: Colors.red),
-                ),
-                onTap: _logout,
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );

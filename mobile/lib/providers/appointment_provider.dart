@@ -1,32 +1,62 @@
 import 'package:flutter/material.dart';
 import '../models/appointment_model.dart';
 import '../models/examination_model.dart';
-import '../services/mock_data_service.dart';
+import '../services/api_service.dart';
 
 class AppointmentProvider extends ChangeNotifier {
-  final MockDataService _mockDataService = MockDataService();
+  final ApiService _apiService = ApiService();
   List<AppointmentModel> _appointments = [];
   List<ExaminationModel> _examinations = [];
+  bool _isLoading = false;
 
   List<AppointmentModel> get appointments => _appointments;
   List<ExaminationModel> get examinations => _examinations;
+  bool get isLoading => _isLoading;
 
   Future<void> loadAppointments(String userId, String role) async {
-    if (role == 'pasien') {
-      _appointments = _mockDataService.getAppointmentsByPatient(userId);
-    } else {
-      _appointments = _mockDataService.getAppointmentsByDoctor(userId);
-    }
+    _isLoading = true;
     notifyListeners();
+
+    try {
+      final endpoint = role == 'pasien'
+          ? ApiService.patientBooking
+          : ApiService.doctorBooking;
+
+      final response = await _apiService.get(endpoint);
+
+      if (response['success'] == true) {
+        final List data = response['data'];
+        _appointments = data.map((json) => AppointmentModel.fromJson(json)).toList();
+      }
+    } catch (e) {
+      debugPrint('Error loading appointments: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadExaminations(String userId, String role) async {
-    if (role == 'pasien') {
-      _examinations = _mockDataService.getExaminationsByPatient(userId);
-    } else {
-      _examinations = _mockDataService.getExaminationsByDoctor(userId);
-    }
+    _isLoading = true;
     notifyListeners();
+
+    try {
+      final endpoint = role == 'pasien'
+          ? ApiService.patientMedicalRecords
+          : '/api/mobile/doctor/examinations';
+
+      final response = await _apiService.get(endpoint);
+
+      if (response['success'] == true) {
+        final List data = response['data'];
+        _examinations = data.map((json) => ExaminationModel.fromJson(json)).toList();
+      }
+    } catch (e) {
+      debugPrint('Error loading examinations: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> bookAppointment({
@@ -39,28 +69,24 @@ class AppointmentProvider extends ChangeNotifier {
     required String paymentMethod,
   }) async {
     try {
-      final newAppointment = AppointmentModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        patientId: patientId,
-        doctorId: doctorId,
-        doctorName: doctorName,
-        date: date,
-        time: time,
-        complaint: complaint,
-        status: 'pending',
-        paymentMethod: paymentMethod,
-        createdAt: DateTime.now(),
+      final response = await _apiService.post(
+        ApiService.patientBooking,
+        {
+          'doctor_id': doctorId,
+          'date': date.toIso8601String(),
+          'time': time,
+          'complaint': complaint,
+          'payment_method': paymentMethod,
+        },
       );
 
-      _mockDataService.addAppointment(newAppointment);
-      _appointments.add(newAppointment);
-      notifyListeners();
-
-      // Create notification for doctor
-      // This would be handled in a real app
-
-      return true;
+      if (response['success'] == true) {
+        await loadAppointments(patientId, 'pasien');
+        return true;
+      }
+      return false;
     } catch (e) {
+      debugPrint('Error booking appointment: $e');
       return false;
     }
   }
@@ -70,54 +96,59 @@ class AppointmentProvider extends ChangeNotifier {
       String status, {
         String? rejectionReason,
       }) async {
-    final index = _appointments.indexWhere((apt) => apt.id == appointmentId);
-    if (index != -1) {
-      final updatedAppointment = AppointmentModel(
-        id: _appointments[index].id,
-        patientId: _appointments[index].patientId,
-        doctorId: _appointments[index].doctorId,
-        doctorName: _appointments[index].doctorName,
-        date: _appointments[index].date,
-        time: _appointments[index].time,
-        complaint: _appointments[index].complaint,
-        status: status,
-        rejectionReason: rejectionReason,
-        paymentMethod: _appointments[index].paymentMethod,
-        createdAt: _appointments[index].createdAt,
-      );
+    try {
+      final endpoint = '/api/mobile/doctor/booking/$appointmentId/$status';
+      final response = await _apiService.put(endpoint, {
+        if (rejectionReason != null) 'reason': rejectionReason,
+      });
 
-      _mockDataService.updateAppointment(updatedAppointment);
-      _appointments[index] = updatedAppointment;
-      notifyListeners();
+      if (response['success'] == true) {
+        final index = _appointments.indexWhere((apt) => apt.id == appointmentId);
+        if (index != -1) {
+          _appointments[index].status = status;
+          if (rejectionReason != null) {
+            _appointments[index].rejectionReason = rejectionReason;
+          }
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error updating appointment: $e');
     }
   }
 
   Future<bool> cancelAppointment(String appointmentId) async {
-    final appointment = _appointments.firstWhere((apt) => apt.id == appointmentId);
+    try {
+      final response = await _apiService.delete('${ApiService.patientBooking}/$appointmentId');
 
-    if (appointment.status == 'pending' ||
-        appointment.status == 'paid' ||
-        appointment.status == 'confirmed') {
-      await updateAppointmentStatus(appointmentId, 'cancelled');
-      return true;
+      if (response['success'] == true) {
+        _appointments.removeWhere((apt) => apt.id == appointmentId);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error cancelling appointment: $e');
+      return false;
     }
-    return false;
   }
 
   Future<void> updateExamination(ExaminationModel examination) async {
-    final index = _examinations.indexWhere((exam) => exam.id == examination.id);
-    if (index != -1) {
-      _mockDataService.updateExamination(examination);
-      _examinations[index] = examination;
-      notifyListeners();
+    try {
+      final response = await _apiService.put(
+        '/api/mobile/examinations/${examination.id}',
+        examination.toJson(),
+      );
+
+      if (response['success'] == true) {
+        final index = _examinations.indexWhere((e) => e.id == examination.id);
+        if (index != -1) {
+          _examinations[index] = examination;
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error updating examination: $e');
     }
-  }
-
-  List<AppointmentModel> getFilteredAppointments(String status) {
-    return _appointments.where((apt) => apt.status == status).toList();
-  }
-
-  List<ExaminationModel> getPatientExaminations(String patientId) {
-    return _examinations.where((exam) => exam.patientId == patientId).toList();
   }
 }
