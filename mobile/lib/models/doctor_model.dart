@@ -1,67 +1,103 @@
 class DoctorModel {
-  final String id;
+  final int id;
   final String name;
   final String specialization;
-  final String photoUrl;
-  final String schedule;
-  final int availableQuota;
+  final String? experience;
+  final String? consultationFee;
   final bool isAvailable;
-  final String? about;
-  final int experience;
-  final String? education;
-  final String? hospital;
-  final double? rating;
-  final int? totalPatients;
+  final String? profilePhoto;
+  final String? email;
+  final String? biography;
+  final List<Schedule>? schedules;
 
   DoctorModel({
     required this.id,
     required this.name,
     required this.specialization,
-    required this.photoUrl,
-    required this.schedule,
-    required this.availableQuota,
+    this.experience,
+    this.consultationFee,
     required this.isAvailable,
-    this.about,
-    required this.experience,
-    this.education,
-    this.hospital,
-    this.rating,
-    this.totalPatients,
+    this.profilePhoto,
+    this.email,
+    this.biography,
+    this.schedules,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'specialization': specialization,
-      'photoUrl': photoUrl,
-      'schedule': schedule,
-      'availableQuota': availableQuota,
-      'isAvailable': isAvailable,
-      'about': about,
-      'experience': experience,
-      'education': education,
-      'hospital': hospital,
-      'rating': rating,
-      'totalPatients': totalPatients,
-    };
-  }
-
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
+    // Handle schedules
+    List<Schedule>? schedules;
+    if (json['schedules'] != null) {
+      schedules = (json['schedules'] as List)
+          .map((e) => Schedule.fromJson(e))
+          .toList();
+    }
+
     return DoctorModel(
       id: json['id'],
-      name: json['name'],
-      specialization: json['specialization'],
-      photoUrl: json['photoUrl'],
-      schedule: json['schedule'],
-      availableQuota: json['availableQuota'],
-      isAvailable: json['isAvailable'],
-      about: json['about'],
+      name: json['name'] ?? '',
+      specialization: json['specialization'] ?? '',
       experience: json['experience'],
-      education: json['education'],
-      hospital: json['hospital'],
-      rating: json['rating']?.toDouble(),
-      totalPatients: json['totalPatients'],
+      consultationFee: json['consultation_fee'],
+      isAvailable: json['is_available'] ?? false,
+      profilePhoto: json['profile_photo'],
+      email: json['email'],
+      biography: json['biography'],
+      schedules: schedules,
     );
   }
+}
+
+class Schedule {
+  final int id;
+  final int doctorId;
+  final String dayOfWeek;
+  final String startTime;
+  final String endTime;
+  final bool isAvailable;
+  final int maxPatients;
+
+  Schedule({
+    required this.id,
+    required this.doctorId,
+    required this.dayOfWeek,
+    required this.startTime,
+    required this.endTime,
+    required this.isAvailable,
+    required this.maxPatients,
+  });
+
+  factory Schedule.fromJson(Map<String, dynamic> json) {
+    return Schedule(
+      id: json['id'],
+      doctorId: json['doctor_id'],
+      dayOfWeek: json['day_of_week'] ?? '',
+      startTime: json['start_time'] ?? '',
+      endTime: json['end_time'] ?? '',
+      isAvailable: json['is_available'] ?? false,
+      maxPatients: json['max_patients'] ?? 0,
+    );
+  }
+
+  String get dayName {
+    switch (dayOfWeek.toLowerCase()) {
+      case 'monday':
+        return 'Senin';
+      case 'tuesday':
+        return 'Selasa';
+      case 'wednesday':
+        return 'Rabu';
+      case 'thursday':
+        return 'Kamis';
+      case 'friday':
+        return 'Jumat';
+      case 'saturday':
+        return 'Sabtu';
+      case 'sunday':
+        return 'Minggu';
+      default:
+        return dayOfWeek;
+    }
+  }
+
+  String get timeRange => '$startTime - $endTime';
 }

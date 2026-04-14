@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/doctor_model.dart';
+import 'package:intl/intl.dart';
 
 class DoctorCard extends StatelessWidget {
   final DoctorModel doctor;
@@ -76,7 +77,7 @@ class DoctorCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             doctor.specialization,
@@ -90,43 +91,17 @@ class DoctorCard extends StatelessWidget {
                         const SizedBox(height: 8),
 
                         // Experience
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.work_outline,
-                              size: 14,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${doctor.experience} tahun',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        if (doctor.rating != null) ...[
-                          const SizedBox(height: 4),
+                        if (doctor.experience != null)
                           Row(
                             children: [
                               Icon(
-                                Icons.star,
+                                Icons.work_outline,
                                 size: 14,
-                                color: Colors.amber[600],
+                                color: Colors.grey[600],
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                doctor.rating!.toStringAsFixed(1),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                ' • ${doctor.totalPatients} pasien',
+                                doctor.experience!,
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   color: Colors.grey[600],
@@ -134,7 +109,26 @@ class DoctorCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                        ],
+
+                        // Consultation Fee
+                        if (doctor.consultationFee != null)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.money,
+                                size: 14,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Fee: Rp ${_formatCurrency(doctor.consultationFee!)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),
@@ -142,7 +136,7 @@ class DoctorCard extends StatelessWidget {
               ),
             ),
 
-            // Schedule and Availability
+            // Availability
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -155,32 +149,7 @@ class DoctorCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Schedule
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.schedule,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            doctor.schedule,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Availability
+                  // Status
                   if (showAvailability)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -206,23 +175,13 @@ class DoctorCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            doctor.isAvailable ? 'Tersedia' : 'Penuh',
+                            doctor.isAvailable ? 'Tersedia' : 'Tidak Tersedia',
                             style: GoogleFonts.poppins(
                               fontSize: 10,
                               color: doctor.isAvailable ? Colors.green : Colors.red,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          if (doctor.isAvailable) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              '(Kuota: ${doctor.availableQuota})',
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -295,28 +254,15 @@ class DoctorCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // Schedule
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.schedule,
-                        size: 12,
+                  // Experience
+                  if (doctor.experience != null)
+                    Text(
+                      doctor.experience!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
                         color: Colors.grey[600],
                       ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          doctor.schedule,
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
 
                   if (showAvailability) ...[
                     const SizedBox(height: 8),
@@ -365,11 +311,11 @@ class DoctorCard extends StatelessWidget {
   }
 
   Widget _buildDoctorImage({double size = 40}) {
-    if (doctor.photoUrl.isNotEmpty) {
+    if (doctor.profilePhoto != null && doctor.profilePhoto!.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          doctor.photoUrl,
+        child: Image.network(
+          doctor.profilePhoto!,
           width: size,
           height: size,
           fit: BoxFit.cover,
@@ -389,58 +335,13 @@ class DoctorCard extends StatelessWidget {
       color: const Color(0xFF4A90E2),
     );
   }
-}
 
-class DoctorHorizontalList extends StatelessWidget {
-  final List<DoctorModel> doctors;
-  final Function(DoctorModel) onDoctorTap;
-  final String? title;
-
-  const DoctorHorizontalList({
-    super.key,
-    required this.doctors,
-    required this.onDoctorTap,
-    this.title,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (doctors.isEmpty) {
-      return const SizedBox.shrink();
+  String _formatCurrency(String amount) {
+    try {
+      final number = double.parse(amount);
+      return NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(number);
+    } catch (e) {
+      return amount;
     }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (title != null) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              title!,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        SizedBox(
-          height: 240,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: doctors.length,
-            itemBuilder: (context, index) {
-              return DoctorCard(
-                doctor: doctors[index],
-                onTap: () => onDoctorTap(doctors[index]),
-                compact: true,
-              );
-            },
-          ),
-        ),
-      ],
-    );
   }
 }

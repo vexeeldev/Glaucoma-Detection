@@ -8,7 +8,6 @@ class AuthProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
   bool _isLoading = false;
 
-  // Keys untuk SharedPreferences
   static const String _keyToken = 'auth_token';
   static const String _keyUserId = 'user_id';
   static const String _keyUserName = 'user_name';
@@ -23,7 +22,6 @@ class AuthProvider extends ChangeNotifier {
   bool get isDokter => _currentUser?.role == 'dokter' || _currentUser?.role == 'doctor';
   bool get isPasien => _currentUser?.role == 'pasien' || _currentUser?.role == 'patient';
 
-  // Cek apakah user sudah login sebelumnya (dipanggil saat app start)
   Future<bool> checkAutoLogin() async {
     _isLoading = true;
     notifyListeners();
@@ -34,22 +32,20 @@ class AuthProvider extends ChangeNotifier {
       final token = await _apiService.getToken();
 
       if (isLoggedIn && token != null && token.isNotEmpty) {
-        // Coba load profile untuk verifikasi token masih valid
+        debugPrint('🔑 Auto login - token found: ${token.substring(0, token.length > 20 ? 20 : token.length)}...');
         final success = await loadProfile();
-
         if (success && _currentUser != null) {
           _isLoading = false;
           notifyListeners();
           return true;
         } else {
-          // Token expired atau invalid
+          debugPrint('⚠️ Auto login failed - profile load unsuccessful');
           await logout();
           _isLoading = false;
           notifyListeners();
           return false;
         }
       }
-
       _isLoading = false;
       notifyListeners();
       return false;
@@ -71,20 +67,30 @@ class AuthProvider extends ChangeNotifier {
         {'email': email, 'password': password},
       );
 
-      debugPrint('Login response: $response');
+      debugPrint('📥 Login response: $response');
 
       if (response['success'] == true || response['status'] == 'success') {
         final data = response['data'];
         final userData = data['user'];
+        final patientData = userData['patient']; // <-- Data medis ada di sini!
         final token = data['token'];
 
-        // Save token ke ApiService dan SharedPreferences
+        if (token == null || token.isEmpty) {
+          debugPrint('❌ ERROR: Token is null or empty!');
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+
+        debugPrint('🔑 Token received: ${token.substring(0, token.length > 20 ? 20 : token.length)}...');
+
         await _apiService.saveToken(token);
 
-        // Simpan data user ke SharedPreferences
+        final savedToken = await _apiService.getToken();
+        debugPrint('🔑 Token saved verification: ${savedToken?.substring(0, savedToken.length > 20 ? 20 : savedToken.length)}...');
+
         await _saveUserDataToPrefs(userData, token);
 
-        // Convert user data ke UserModel
         _currentUser = UserModel(
           id: userData['id'].toString(),
           name: userData['name'] ?? '',
@@ -92,19 +98,32 @@ class AuthProvider extends ChangeNotifier {
           password: '',
           role: _mapRole(userData['role'] ?? 'patient'),
           phoneNumber: userData['phone'],
-          address: userData['address'],
-          bloodType: userData['blood_type'],
-          medicalHistory: userData['medical_history'],
-          allergies: userData['allergies'],
-          insuranceName: userData['insurance_name'],
-          insurancePolicyNumber: userData['insurance_policy_number'],
+          address: patientData?['address'] ?? userData['address'],
+          bloodType: patientData?['blood_type'],
+          medicalHistory: patientData?['medical_history'],
+          allergies: patientData?['allergies'],
+          insuranceName: patientData?['insurance_provider'],
+          insurancePolicyNumber: patientData?['insurance_number'],
           nik: userData['nik'],
           username: userData['username'],
-          dateOfBirth: userData['date_of_birth'],
-          gender: userData['gender'],
-          city: userData['city'],
-          province: userData['province'],
+          dateOfBirth: patientData?['date_of_birth'] ?? userData['date_of_birth'],
+          gender: patientData?['gender'] ?? userData['gender'],
+          city: patientData?['city'] ?? userData['city'],
+          province: patientData?['province'] ?? userData['province'],
+          religion: userData['religion'],
+          nationality: userData['nationality'],
+          postalCode: patientData?['postal_code'],
+          emergencyContactName: patientData?['emergency_contact_name'],
+          emergencyContactPhone: patientData?['emergency_contact_phone'],
+          emergencyContactRelation: patientData?['emergency_contact_relation'],
+          currentMedications: patientData?['current_medications'],
+          insuranceProvider: patientData?['insurance_provider'],
+          insuranceNumber: patientData?['insurance_number'],
         );
+
+        debugPrint('✅ Login successful: ${_currentUser!.name}');
+        debugPrint('   Blood Type: ${_currentUser!.bloodType}');
+        debugPrint('   Insurance Provider: ${_currentUser!.insuranceProvider}');
 
         _isLoading = false;
         notifyListeners();
@@ -114,14 +133,13 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      debugPrint('Login error: $e');
+      debugPrint('❌ Login error: $e');
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // Simpan data user ke SharedPreferences
   Future<void> _saveUserDataToPrefs(Map<String, dynamic> userData, String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyToken, token);
@@ -133,12 +151,10 @@ class AuthProvider extends ChangeNotifier {
     await prefs.setBool(_keyIsLoggedIn, true);
   }
 
-  // Load user data dari SharedPreferences (fallback jika offline)
   Future<bool> loadUserFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
-
       if (!isLoggedIn) return false;
 
       final userId = prefs.getString(_keyUserId);
@@ -161,6 +177,21 @@ class AuthProvider extends ChangeNotifier {
           allergies: null,
           insuranceName: null,
           insurancePolicyNumber: null,
+          nik: null,
+          username: null,
+          dateOfBirth: null,
+          gender: null,
+          city: null,
+          province: null,
+          religion: null,
+          nationality: null,
+          postalCode: null,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          emergencyContactRelation: null,
+          currentMedications: null,
+          insuranceProvider: null,
+          insuranceNumber: null,
         );
         notifyListeners();
         return true;
@@ -178,34 +209,83 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String role,
     String? phoneNumber,
+    String? nik,
+    String? username,
+    String? dateOfBirth,
+    String? gender,
+    String? address,
+    String? city,
+    String? province,
+    String? religion,
+    String? nationality,
+    String? postalCode,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelation,
+    String? bloodType,
+    String? medicalHistory,
+    String? currentMedications,
+    String? allergies,
+    String? insuranceProvider,
+    String? insuranceNumber,
   }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
+      final Map<String, dynamic> requestData = {
+        'name': name,
+        'email': email,
+        'password': password,
+        'role': role,
+      };
+
+      // Field wajib
+      if (phoneNumber != null && phoneNumber.isNotEmpty) requestData['phone'] = phoneNumber;
+      if (username != null && username.isNotEmpty) requestData['username'] = username;
+      if (gender != null && gender.isNotEmpty) requestData['gender'] = gender;
+
+      // Field opsional
+      if (nik != null && nik.isNotEmpty) requestData['nik'] = nik;
+      if (dateOfBirth != null && dateOfBirth.isNotEmpty) requestData['date_of_birth'] = dateOfBirth;
+      if (address != null && address.isNotEmpty) requestData['address'] = address;
+      if (city != null && city.isNotEmpty) requestData['city'] = city;
+      if (province != null && province.isNotEmpty) requestData['province'] = province;
+      if (religion != null && religion.isNotEmpty) requestData['religion'] = religion;
+      if (nationality != null && nationality.isNotEmpty) requestData['nationality'] = nationality;
+
+      // Field tambahan
+      if (postalCode != null && postalCode.isNotEmpty) requestData['postal_code'] = postalCode;
+      if (emergencyContactName != null && emergencyContactName.isNotEmpty) requestData['emergency_contact_name'] = emergencyContactName;
+      if (emergencyContactPhone != null && emergencyContactPhone.isNotEmpty) requestData['emergency_contact_phone'] = emergencyContactPhone;
+      if (emergencyContactRelation != null && emergencyContactRelation.isNotEmpty) requestData['emergency_contact_relation'] = emergencyContactRelation;
+      if (bloodType != null && bloodType.isNotEmpty) requestData['blood_type'] = bloodType;
+      if (medicalHistory != null && medicalHistory.isNotEmpty) requestData['medical_history'] = medicalHistory;
+      if (currentMedications != null && currentMedications.isNotEmpty) requestData['current_medications'] = currentMedications;
+      if (allergies != null && allergies.isNotEmpty) requestData['allergies'] = allergies;
+      if (insuranceProvider != null && insuranceProvider.isNotEmpty) requestData['insurance_provider'] = insuranceProvider;
+      if (insuranceNumber != null && insuranceNumber.isNotEmpty) requestData['insurance_number'] = insuranceNumber;
+
+      debugPrint('📝 Register request: $requestData');
+
       final response = await _apiService.post(
         ApiService.registerEndpoint,
-        {
-          'name': name,
-          'email': email,
-          'password': password,
-          'role': role,
-          'phone': phoneNumber,
-        },
+        requestData,
       );
 
-      debugPrint('Register response: $response');
+      debugPrint('📥 Register response: $response');
 
       if (response['success'] == true || response['status'] == 'success') {
         _isLoading = false;
         notifyListeners();
         return true;
       }
+
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
-      debugPrint('Register error: $e');
+      debugPrint('❌ Register error: $e');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -246,15 +326,12 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Panggil API logout
-      final response = await _apiService.post(ApiService.logoutEndpoint, {});
-      debugPrint('Logout response: $response');
+      await _apiService.post(ApiService.logoutEndpoint, {});
+      debugPrint('Logout API called');
     } catch (e) {
       debugPrint('Logout API error (ignored): $e');
-      // Tetap lanjut hapus data lokal meskipun API error
     }
 
-    // Hapus semua data dari SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyToken);
     await prefs.remove(_keyUserId);
@@ -277,12 +354,27 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
+      final token = await _apiService.getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint('❌ No token available, cannot load profile');
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      debugPrint('🔑 Using token for profile: ${token.substring(0, token.length > 20 ? 20 : token.length)}...');
+
       final response = await _apiService.get(ApiService.patientProfile);
-      debugPrint('Load profile response: $response');
+      debugPrint('📥 Load profile response: $response');
 
       if (response['status'] == 'success') {
         final data = response['data'];
-        final patientData = data['patient'];
+        final patientData = data['patient']; // <-- Data medis ada di sini!
+
+        debugPrint('Patient Data - Blood Type: ${patientData?['blood_type']}');
+        debugPrint('Patient Data - Medical History: ${patientData?['medical_history']}');
+        debugPrint('Patient Data - Allergies: ${patientData?['allergies']}');
+        debugPrint('Patient Data - Insurance Provider: ${patientData?['insurance_provider']}');
 
         _currentUser = UserModel(
           id: data['id'].toString(),
@@ -299,13 +391,28 @@ class AuthProvider extends ChangeNotifier {
           insurancePolicyNumber: patientData?['insurance_number'],
           nik: data['nik'],
           username: data['username'],
-          dateOfBirth: data['date_of_birth'],
-          gender: data['gender'],
-          city: data['city'],
-          province: data['province'],
+          dateOfBirth: patientData?['date_of_birth'] ?? data['date_of_birth'],
+          gender: patientData?['gender'] ?? data['gender'],
+          city: patientData?['city'] ?? data['city'],
+          province: patientData?['province'] ?? data['province'],
+          religion: data['religion'],
+          nationality: data['nationality'],
+          postalCode: patientData?['postal_code'],
+          emergencyContactName: patientData?['emergency_contact_name'],
+          emergencyContactPhone: patientData?['emergency_contact_phone'],
+          emergencyContactRelation: patientData?['emergency_contact_relation'],
+          currentMedications: patientData?['current_medications'],
+          insuranceProvider: patientData?['insurance_provider'],
+          insuranceNumber: patientData?['insurance_number'],
         );
 
-        // Update SharedPreferences dengan data terbaru
+        debugPrint('✅ Profile loaded: ${_currentUser!.name}');
+        debugPrint('   Blood Type: ${_currentUser!.bloodType}');
+        debugPrint('   Medical History: ${_currentUser!.medicalHistory}');
+        debugPrint('   Allergies: ${_currentUser!.allergies}');
+        debugPrint('   Insurance Provider: ${_currentUser!.insuranceProvider}');
+        debugPrint('   Insurance Number: ${_currentUser!.insuranceNumber}');
+
         await _updatePrefsFromCurrentUser();
 
         _isLoading = false;
@@ -317,14 +424,13 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      debugPrint('Error loading profile: $e');
+      debugPrint('❌ Error loading profile: $e');
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // Update SharedPreferences dengan data user terbaru
   Future<void> _updatePrefsFromCurrentUser() async {
     if (_currentUser == null) return;
 
@@ -342,40 +448,40 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final Map<String, dynamic> userData = {
+      final Map<String, dynamic> requestData = {
         'name': updatedUser.name,
         'phone': updatedUser.phoneNumber,
-        'address': updatedUser.address,
         'nik': updatedUser.nik,
         'username': updatedUser.username,
         'date_of_birth': updatedUser.dateOfBirth,
         'gender': updatedUser.gender,
+        'address': updatedUser.address,
         'city': updatedUser.city,
         'province': updatedUser.province,
-      };
-
-      final Map<String, dynamic> patientData = {
+        'religion': updatedUser.religion,
+        'nationality': updatedUser.nationality,
+        'postal_code': updatedUser.postalCode,
+        'emergency_contact_name': updatedUser.emergencyContactName,
+        'emergency_contact_phone': updatedUser.emergencyContactPhone,
+        'emergency_contact_relation': updatedUser.emergencyContactRelation,
         'blood_type': updatedUser.bloodType,
         'medical_history': updatedUser.medicalHistory,
+        'current_medications': updatedUser.currentMedications,
         'allergies': updatedUser.allergies,
-        'insurance_provider': updatedUser.insuranceName,
-        'insurance_number': updatedUser.insurancePolicyNumber,
+        'insurance_provider': updatedUser.insuranceProvider,
+        'insurance_number': updatedUser.insuranceNumber,
       };
 
-      userData.removeWhere((key, value) => value == null);
-      patientData.removeWhere((key, value) => value == null);
+      requestData.removeWhere((key, value) => value == null || value.toString().isEmpty);
 
-      final Map<String, dynamic> requestData = {
-        ...userData,
-        ...patientData,
-      };
+      debugPrint('📝 Update profile request: $requestData');
 
       final response = await _apiService.put(
         ApiService.patientProfile,
         requestData,
       );
 
-      debugPrint('Update profile response: $response');
+      debugPrint('📥 Update profile response: $response');
 
       if (response['status'] == 'success') {
         await loadProfile();
@@ -388,7 +494,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      debugPrint('Error updating profile: $e');
+      debugPrint('❌ Error updating profile: $e');
       _isLoading = false;
       notifyListeners();
       return false;

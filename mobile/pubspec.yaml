@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Network & API
   http: ^1.1.0
@@ -26,7 +28,7 @@ dependencies:
   provider: ^6.1.1
 
   # Utils
-  intl: ^0.18.1
+  intl: ^0.20.2  # <-- UBAH dari ^0.18.1 ke ^0.20.2
   image_picker: ^1.0.5
   url_launcher: ^6.2.1
 

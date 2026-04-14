@@ -23,13 +23,38 @@ class AppointmentProvider extends ChangeNotifier {
           : ApiService.doctorBooking;
 
       final response = await _apiService.get(endpoint);
+      debugPrint('📥 Load appointments response: $response');
 
-      if (response['success'] == true) {
-        final List data = response['data'];
-        _appointments = data.map((json) => AppointmentModel.fromJson(json)).toList();
+      List<AppointmentModel> newAppointments = [];
+
+      if (response['data'] != null && response['data'] is List) {
+        newAppointments = (response['data'] as List)
+            .map((json) => AppointmentModel.fromJson(json))
+            .toList();
+        debugPrint('✅ Loaded ${newAppointments.length} appointments from response[\'data\']');
       }
+      else if (response['status'] == 'success' && response['data'] != null) {
+        if (response['data'] is List) {
+          newAppointments = (response['data'] as List)
+              .map((json) => AppointmentModel.fromJson(json))
+              .toList();
+        } else if (response['data']['data'] != null) {
+          newAppointments = (response['data']['data'] as List)
+              .map((json) => AppointmentModel.fromJson(json))
+              .toList();
+        }
+        debugPrint('✅ Loaded ${newAppointments.length} appointments from status response');
+      }
+      else if (response is List) {
+        newAppointments = (response as List)
+            .map((json) => AppointmentModel.fromJson(json))
+            .toList();
+        debugPrint('✅ Loaded ${newAppointments.length} appointments from direct list');
+      }
+
+      _appointments = newAppointments;
     } catch (e) {
-      debugPrint('Error loading appointments: $e');
+      debugPrint('❌ Error loading appointments: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -47,10 +72,25 @@ class AppointmentProvider extends ChangeNotifier {
 
       final response = await _apiService.get(endpoint);
 
-      if (response['success'] == true) {
-        final List data = response['data'];
-        _examinations = data.map((json) => ExaminationModel.fromJson(json)).toList();
+      List<ExaminationModel> newExaminations = [];
+
+      if (response['data'] != null && response['data'] is List) {
+        newExaminations = (response['data'] as List)
+            .map((json) => ExaminationModel.fromJson(json))
+            .toList();
+      } else if (response['status'] == 'success' && response['data'] != null) {
+        if (response['data'] is List) {
+          newExaminations = (response['data'] as List)
+              .map((json) => ExaminationModel.fromJson(json))
+              .toList();
+        } else if (response['data']['data'] != null) {
+          newExaminations = (response['data']['data'] as List)
+              .map((json) => ExaminationModel.fromJson(json))
+              .toList();
+        }
       }
+
+      _examinations = newExaminations;
     } catch (e) {
       debugPrint('Error loading examinations: $e');
     } finally {
@@ -59,34 +99,104 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> bookAppointment({
-    required String patientId,
-    required String doctorId,
-    required String doctorName,
-    required DateTime date,
-    required String time,
-    required String complaint,
+  Future<Map<String, dynamic>?> bookAppointment({
+    required int patientId,
+    required int doctorId,
+    required String appointmentDate,
+    required String appointmentTime,
+    required String packageType,
+    required String patientComplaint,
+  }) async {
+    try {
+      final requestData = {
+        'patient_id': patientId,
+        'doctor_id': doctorId,
+        'appointment_date': appointmentDate,
+        'appointment_time': appointmentTime,
+        'package_type': packageType,
+        'patient_complaint': patientComplaint,
+      };
+
+      debugPrint('📤 Booking request: $requestData');
+
+      final response = await _apiService.post(
+        ApiService.patientBooking,
+        requestData,
+      );
+
+      debugPrint('📥 Booking response: $response');
+
+      if (response['status'] == 'success') {
+        await loadAppointments(patientId.toString(), 'pasien');
+        return response['data'];
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error booking appointment: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getBookingDetail(int bookingId) async {
+    try {
+      final response = await _apiService.get('${ApiService.patientBooking}/$bookingId');
+      debugPrint('📥 Booking detail response: $response');
+
+      if (response['status'] == 'success') {
+        return response['data'];
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting booking detail: $e');
+      return null;
+    }
+  }
+
+  // GET payment by appointment ID
+  Future<Map<String, dynamic>?> getPaymentByAppointmentId(int appointmentId) async {
+    try {
+      final response = await _apiService.get('${ApiService.patientPayment}/$appointmentId');
+      debugPrint('📥 Payment response: $response');
+
+      if (response['status'] == 'success') {
+        return response['data'];
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting payment: $e');
+      return null;
+    }
+  }
+
+  // POST payment (confirm payment)
+  Future<bool> confirmPayment({
+    required int appointmentId,
     required String paymentMethod,
   }) async {
     try {
+      final requestData = {
+        'appointment_id': appointmentId,
+        'payment_method': paymentMethod,
+      };
+
+      debugPrint('📤 Payment request: $requestData');
+
       final response = await _apiService.post(
-        ApiService.patientBooking,
-        {
-          'doctor_id': doctorId,
-          'date': date.toIso8601String(),
-          'time': time,
-          'complaint': complaint,
-          'payment_method': paymentMethod,
-        },
+        ApiService.patientPayment,
+        requestData,
       );
 
-      if (response['success'] == true) {
-        await loadAppointments(patientId, 'pasien');
+      debugPrint('📥 Payment response: $response');
+
+      if (response['status'] == 'success') {
+        // Refresh appointments after payment
+        await loadAppointments(appointmentId.toString(), 'pasien');
         return true;
       }
       return false;
     } catch (e) {
-      debugPrint('Error booking appointment: $e');
+      debugPrint('❌ Error confirming payment: $e');
       return false;
     }
   }
@@ -119,16 +229,28 @@ class AppointmentProvider extends ChangeNotifier {
 
   Future<bool> cancelAppointment(String appointmentId) async {
     try {
+      debugPrint('🗑️ Cancelling appointment: $appointmentId');
       final response = await _apiService.delete('${ApiService.patientBooking}/$appointmentId');
+      debugPrint('📥 Cancel appointment response: $response');
 
-      if (response['success'] == true) {
+      if (response['message'] != null) {
         _appointments.removeWhere((apt) => apt.id == appointmentId);
         notifyListeners();
+        debugPrint('✅ Appointment $appointmentId cancelled successfully');
         return true;
       }
+
+      if (response['status'] == 'success' || response['success'] == true) {
+        _appointments.removeWhere((apt) => apt.id == appointmentId);
+        notifyListeners();
+        debugPrint('✅ Appointment $appointmentId cancelled successfully');
+        return true;
+      }
+
+      debugPrint('❌ Failed to cancel appointment: $response');
       return false;
     } catch (e) {
-      debugPrint('Error cancelling appointment: $e');
+      debugPrint('❌ Error cancelling appointment: $e');
       return false;
     }
   }
@@ -150,5 +272,11 @@ class AppointmentProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error updating examination: $e');
     }
+  }
+
+  void clearData() {
+    _appointments.clear();
+    _examinations.clear();
+    notifyListeners();
   }
 }

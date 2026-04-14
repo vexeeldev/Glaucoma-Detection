@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,37 +24,59 @@ class ApiService {
   // Doctor endpoints
   static const String doctorBooking = '/api/mobile/doctor/booking';
 
-  // Headers
+  // Headers - TAMBAHKAN ngrok-skip-browser-warning
   Map<String, String> _getHeaders(String? token) {
-    return {
+    final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
+      'ngrok-skip-browser-warning': 'true', // <-- INI PENTING!
     };
+
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    return headers;
   }
 
   Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
+    debugPrint('🔑 Token saved: ${token.substring(0, token.length > 20 ? 20 : token.length)}...');
   }
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    final token = prefs.getString('auth_token');
+    if (token != null && token.isNotEmpty) {
+      debugPrint('🔑 Token retrieved: ${token.substring(0, token.length > 20 ? 20 : token.length)}...');
+    } else {
+      debugPrint('⚠️ No token found');
+    }
+    return token;
   }
 
   Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    debugPrint('🗑️ Token cleared');
   }
 
   Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> data) async {
     final token = await getToken();
+    final uri = Uri.parse('$baseUrl$endpoint');
+
+    debugPrint('📤 POST: $uri');
+    debugPrint('📤 Headers: ${_getHeaders(token)}');
+    debugPrint('📤 Body: $data');
+
     final response = await http.post(
-      Uri.parse('$baseUrl$endpoint'),
+      uri,
       headers: _getHeaders(token),
       body: jsonEncode(data),
     );
+
+    debugPrint('📥 Response (${response.statusCode}): ${response.body}');
     return _handleResponse(response);
   }
 
@@ -63,29 +86,50 @@ class ApiService {
     if (queryParams != null) {
       uri = uri.replace(queryParameters: queryParams);
     }
+
+    debugPrint('📤 GET: $uri');
+    debugPrint('📤 Headers: ${_getHeaders(token)}');
+
     final response = await http.get(
       uri,
       headers: _getHeaders(token),
     );
+
+    debugPrint('📥 Response (${response.statusCode}): ${response.body}');
     return _handleResponse(response);
   }
 
   Future<Map<String, dynamic>> put(String endpoint, Map<String, dynamic> data) async {
     final token = await getToken();
+    final uri = Uri.parse('$baseUrl$endpoint');
+
+    debugPrint('📤 PUT: $uri');
+    debugPrint('📤 Headers: ${_getHeaders(token)}');
+    debugPrint('📤 Body: $data');
+
     final response = await http.put(
-      Uri.parse('$baseUrl$endpoint'),
+      uri,
       headers: _getHeaders(token),
       body: jsonEncode(data),
     );
+
+    debugPrint('📥 Response (${response.statusCode}): ${response.body}');
     return _handleResponse(response);
   }
 
   Future<Map<String, dynamic>> delete(String endpoint) async {
     final token = await getToken();
+    final uri = Uri.parse('$baseUrl$endpoint');
+
+    debugPrint('📤 DELETE: $uri');
+    debugPrint('📤 Headers: ${_getHeaders(token)}');
+
     final response = await http.delete(
-      Uri.parse('$baseUrl$endpoint'),
+      uri,
       headers: _getHeaders(token),
     );
+
+    debugPrint('📥 Response (${response.statusCode}): ${response.body}');
     return _handleResponse(response);
   }
 
@@ -96,8 +140,10 @@ class ApiService {
       }
       return jsonDecode(response.body);
     } else if (response.statusCode == 401) {
+      debugPrint('❌ Unauthorized (401) - Token mungkin expired');
       throw Exception('Unauthorized - Please login again');
     } else {
+      debugPrint('❌ Server error: ${response.statusCode}');
       throw Exception('Server error: ${response.statusCode}');
     }
   }
