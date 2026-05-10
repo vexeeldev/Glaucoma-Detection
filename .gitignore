@@ -48,3 +48,4 @@ ai-service/eyepac-light-v2-512-jpg/validation/
 ai-service/dataset_glaucoma.zip
 *.zip
 dataset/
+*/ai-chili/
