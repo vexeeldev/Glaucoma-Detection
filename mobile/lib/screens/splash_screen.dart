@@ -32,15 +32,22 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 3), () {
-      _navigateToNextScreen();
+    // Tunggu 2 detik untuk animasi, lalu cek auto-login
+    Future.delayed(const Duration(seconds: 2), () async {
+      await _checkAutoLogin();
     });
   }
 
-  void _navigateToNextScreen() {
+  Future<void> _checkAutoLogin() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    if (authProvider.isLoggedIn) {
+    // Cek apakah user sudah login sebelumnya
+    final isLoggedIn = await authProvider.checkAutoLogin();
+
+    if (!mounted) return;
+
+    if (isLoggedIn) {
+      // User sudah login, langsung ke home screen
       if (authProvider.isDokter) {
         Navigator.pushReplacement(
           context,
@@ -53,6 +60,7 @@ class _SplashScreenState extends State<SplashScreen>
         );
       }
     } else {
+      // User belum login, ke login screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -112,6 +120,7 @@ class _SplashScreenState extends State<SplashScreen>
                     color: Colors.white,
                   ),
                 ),
+                const SizedBox(height: 8),
                 Text(
                   'Smart Glaucoma Detection',
                   style: GoogleFonts.poppins(

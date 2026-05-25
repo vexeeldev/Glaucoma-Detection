@@ -3,8 +3,8 @@ class NotificationModel {
   final String userId;
   final String title;
   final String message;
-  final String type; // 'appointment_confirmed', 'appointment_rejected', 'payment_success', 'examination_ready'
-  final bool isRead;
+  final String type;
+  bool isRead; // Diubah dari final menjadi mutable
   final DateTime createdAt;
   final Map<String, dynamic>? data;
 

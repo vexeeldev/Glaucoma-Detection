@@ -2,21 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ML\MachineController; 
-use App\Http\Controllers\labs\DashboardController;
-use App\Http\Controllers\labs\ExaminationController;
-use App\Http\Controllers\labs\LoginLabsController;
-use App\Http\Controllers\labs\LogoutLabsController;
+use App\Http\Controllers\labs\{DashboardController, ExaminationController, LoginLabsController, LogoutLabsController};
 use App\Http\Controllers\Desktop\{LoginAdminController, LogoutAdminController, RegisterAdminController};
 use App\Http\Controllers\Mobile\{LoginController, LogoutController, RegisterController};
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
-use App\Http\Controllers\Mobile\patient\DoctorController;
-use App\Http\Controllers\Mobile\patient\BookingController;
-use App\Http\Controllers\Mobile\patient\PaymentController;
-use App\Http\Controllers\Mobile\patient\NotificationController;
-use App\Http\Controllers\Mobile\patient\DashboardPatientController;
-use App\Http\Controllers\Mobile\patient\ProfilePatientController;
-use App\Http\Controllers\Mobile\patient\ForgotPasswordController;
+use App\Http\Controllers\Mobile\patient\{DoctorController, BookingController, PaymentController, NotificationController}; 
+use App\Http\Controllers\Mobile\patient\{DashboardPatientController, ProfilePatientController, ForgotPasswordController};
+use App\Http\Controllers\Mobile\doctor\{DoctorAppointmentController};
+use App\Http\Controllers\Admin\{AdminDashboardController, ManagementUserController, ManagementDoctorController};
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +50,38 @@ Route::get('/proxy-image', function (Illuminate\Http\Request $request) {
 | Protected Routes (Wajib Login / Auth Sanctum)
 |--------------------------------------------------------------------------
 */
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Group khusus Admin
+    Route::prefix('admin')->group(function () {
+        Route::get('/dashboard', [AdminDashboardController::class, 'getDashboardData']);
+
+  Route::prefix('management')->group(function () {
+
+    Route::prefix('users')->group(function () {
+        Route::get('/', [ManagementUserController::class, 'index']);
+        Route::get('/{id}', [ManagementUserController::class, 'show']);
+        Route::patch('/{id}/status', [ManagementUserController::class, 'updateStatus']);
+        Route::delete('/{id}', [ManagementUserController::class, 'destroy']);
+    });
+
+    Route::prefix('doctors')->group(function () {
+         Route::get('/', [ManagementDoctorController::class, 'index']);
+         Route::post('/', [ManagementDoctorController::class, 'store']);
+        Route::get('/{id}', [ManagementDoctorController::class, 'show']);
+        Route::put('/{id}', [ManagementDoctorController::class, 'update']);
+        Route::patch('/{id}/status', [ManagementDoctorController::class, 'updateStatus']);
+        Route::delete('/{id}', [ManagementDoctorController::class, 'destroy']);
+        Route::get('/{doctorId}/schedules', [ManagementDoctorController::class, 'schedules']);
+        Route::post('/{doctorId}/schedules', [ManagementDoctorController::class, 'storeSchedule']);
+        Route::patch('/schedules/{scheduleId}', [ManagementDoctorController::class, 'updateSchedule']);
+        Route::delete('/schedules/{scheduleId}', [ManagementDoctorController::class, 'destroySchedule']);
+    });
+
+});
+
+    });
+});
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -109,6 +135,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- ROLE: DOCTOR (Mobile) ---
     Route::prefix('mobile/doctor')->group(function () {
+        Route::get('/appointments', [DoctorAppointmentController::class, 'index']);
+        Route::get('/appointments/{id}', [DoctorAppointmentController::class, 'show']);
         Route::prefix('booking')->group(function () {
             Route::put('/{id}/confirm', [BookingController::class, 'confirm']);
             Route::put('/{id}/reject', [BookingController::class, 'reject']);

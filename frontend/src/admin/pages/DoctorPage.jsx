@@ -1,17 +1,164 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Plus } from 'lucide-react';
 
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
-import { DOCTORS_DATA } from '../data/dummy';
 
 const DoctorPage = () => {
   const [tab, setTab] = useState('list');
+
+  const [doctors, setDoctors] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+
+  const [selectedDoctor, setSelectedDoctor] = useState('');
+
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
+
   const [showAddModal, setShowAddModal] = useState(false);
+
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: 'rsmata123',
+    specialization_id: '',
+    license_number: '',
+    experience_years: '',
+    consultation_fee: '',
+    bio: '',
+  });
+
+  const API_URL = 'http://127.0.0.1:8000/api';
+
+  const headers = {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+    Accept: 'application/json',
+  };
+
+  const fetchDoctors = async () => {
+    try {
+      setLoadingDoctors(true);
+
+      const response = await axios.get(
+        `${API_URL}/admin/management/doctors`,
+        { headers }
+      );
+
+      setDoctors(response.data.data);
+
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoadingDoctors(false);
+    }
+  };
+
+  const fetchSchedules = async (doctorId) => {
+    try {
+      setLoadingSchedules(true);
+
+      const response = await axios.get(
+        `${API_URL}/admin/management/doctors/${doctorId}/schedules`,
+        { headers }
+      );
+
+      setSchedules(response.data.data);
+
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoadingSchedules(false);
+    }
+  };
+
+  const handleStoreDoctor = async () => {
+    try {
+
+      await axios.post(
+        `${API_URL}/admin/management/doctors`,
+        form,
+        { headers }
+      );
+
+      alert('Dokter berhasil ditambahkan');
+
+      setShowAddModal(false);
+
+      setForm({
+        name: '',
+        email: '',
+        phone: '',
+        password: 'rsmata123',
+        specialization_id: '',
+        license_number: '',
+        experience_years: '',
+        consultation_fee: '',
+        bio: '',
+      });
+
+      fetchDoctors();
+
+    } catch (error) {
+      console.log(error);
+
+      alert(
+        error?.response?.data?.message ||
+        'Gagal menambahkan dokter'
+      );
+    }
+  };
+
+  const handleDeleteDoctor = async (doctorId) => {
+    const confirmDelete = confirm(
+      'Yakin ingin menghapus dokter ini?'
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+
+      await axios.delete(
+        `${API_URL}/admin/management/doctors/${doctorId}`,
+        { headers }
+      );
+
+      alert('Dokter berhasil dihapus');
+
+      fetchDoctors();
+
+    } catch (error) {
+      console.log(error);
+
+      alert('Gagal menghapus dokter');
+    }
+  };
+
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const dayMap = {
+    monday: 'Senin',
+    tuesday: 'Selasa',
+    wednesday: 'Rabu',
+    thursday: 'Kamis',
+    friday: 'Jumat',
+    saturday: 'Sabtu',
+    sunday: 'Minggu',
+  };
+
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
+
       <div className="flex border-b border-gray-200">
         {['list', 'schedule'].map((t) => (
           <button
@@ -23,107 +170,243 @@ const DoctorPage = () => {
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}
           >
-            {t === 'list' ? 'Daftar Dokter' : 'Jadwal Praktik'}
+            {t === 'list'
+              ? 'Daftar Dokter'
+              : 'Jadwal Praktik'}
           </button>
         ))}
       </div>
 
-      {/* List tab */}
       {tab === 'list' && (
-        <div className="animate-in slide-in-from-left duration-300">
+        <div>
+
           <div className="flex justify-between items-center mb-6">
+
             <h3 className="text-xl font-bold text-gray-800">
-              Total Dokter: {DOCTORS_DATA.length}
+              Total Dokter: {doctors.length}
             </h3>
+
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-all font-bold"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
             >
-              <Plus size={20} /> Tambah Dokter
+              <Plus size={20} />
+              Tambah Dokter
             </button>
+
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {DOCTORS_DATA.map((doc) => (
-              <div
-                key={doc.id}
-                className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center"
-              >
-                <div className="w-24 h-24 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-3xl font-bold mb-4 ring-4 ring-blue-50 border border-white">
-                  {doc.name.charAt(4)}
-                </div>
-                <h4 className="font-bold text-lg text-gray-800">{doc.name}</h4>
-                <p className="text-blue-600 text-sm mb-4">{doc.spec}</p>
-                <div className="w-full space-y-2 text-sm text-gray-500 mb-6">
-                  <div className="flex justify-between">
-                    <span>Lisensi</span> <span className="text-gray-800">{doc.license}</span>
+          {loadingDoctors ? (
+            <div className="text-center py-10">
+              Loading...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+              {doctors.map((doc) => (
+
+                <div
+                  key={doc.id}
+                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
+                >
+
+                  <div className="w-24 h-24 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-3xl font-bold mx-auto mb-4">
+                    {doc.name?.charAt(0)}
                   </div>
-                  <div className="flex justify-between">
-                    <span>Pengalaman</span> <span className="text-gray-800">{doc.exp}</span>
+
+                  <h4 className="font-bold text-lg text-center text-gray-800">
+                    {doc.name}
+                  </h4>
+
+                  <p className="text-blue-600 text-sm text-center mb-4">
+                    {doc.specialization}
+                  </p>
+
+                  <div className="space-y-2 text-sm text-gray-600">
+
+                    <div className="flex justify-between">
+                      <span>Lisensi</span>
+                      <span>{doc.license}</span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span>Pengalaman</span>
+                      <span>{doc.exp}</span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span>Biaya</span>
+                      <span className="font-bold">
+                        {doc.fee}
+                      </span>
+                    </div>
+
                   </div>
-                  <div className="flex justify-between">
-                    <span>Biaya</span> <span className="text-gray-800 font-bold">{doc.fee}</span>
+
+                  <div className="flex gap-2 mt-6">
+
+                    <button
+                      className="flex-1 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedDoctor(doc.id);
+                        setTab('schedule');
+
+                        fetchSchedules(doc.id);
+                      }}
+                      className="flex-1 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    >
+                      Jadwal
+                    </button>
+
                   </div>
-                </div>
-                <div className="flex gap-2 w-full">
-                  <button className="flex-1 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-bold">
-                    Edit
+
+                  <button
+                    onClick={() => handleDeleteDoctor(doc.id)}
+                    className="w-full mt-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                  >
+                    Hapus
                   </button>
-                  <button className="flex-1 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 font-bold">
-                    Lihat Jadwal
-                  </button>
+
                 </div>
-              </div>
-            ))}
-          </div>
+
+              ))}
+
+            </div>
+          )}
         </div>
       )}
 
-      {/* Schedule tab */}
       {tab === 'schedule' && (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in slide-in-from-right duration-300">
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+
           <div className="flex justify-between items-center mb-6">
-            <select className="px-4 py-2 rounded-lg border border-gray-200 min-w-[300px] outline-none font-medium">
-              <option>Pilih Dokter: dr. Andi Permadi Sp.M</option>
-              <option>Pilih Dokter: dr. Rani Wijaya Sp.M</option>
+
+            <select
+              value={selectedDoctor}
+              onChange={(e) => {
+                setSelectedDoctor(e.target.value);
+
+                if (e.target.value) {
+                  fetchSchedules(e.target.value);
+                }
+              }}
+              className="px-4 py-2 rounded-lg border border-gray-200 min-w-[300px] outline-none"
+            >
+
+              <option value="">
+                Pilih Dokter
+              </option>
+
+              {doctors.map((doc) => (
+                <option
+                  key={doc.id}
+                  value={doc.id}
+                >
+                  {doc.name}
+                </option>
+              ))}
+
             </select>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-all font-bold">
-              <Plus size={20} /> Tambah Jadwal
-            </button>
+
           </div>
+
           <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-500 text-xs font-bold uppercase">
+
+            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+
               <tr>
                 <th className="px-6 py-4">Hari</th>
                 <th className="px-6 py-4">Jam Mulai</th>
                 <th className="px-6 py-4">Jam Selesai</th>
-                <th className="px-6 py-4 text-center">Kuota</th>
+                <th className="px-6 py-4">Kuota</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
+
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {['Senin', 'Selasa', 'Kamis', 'Jumat', 'Sabtu'].map((day, idx) => (
-                <tr key={idx} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-bold">{day}</td>
-                  <td className="px-6 py-4">08:00</td>
-                  <td className="px-6 py-4">12:00</td>
-                  <td className="px-6 py-4 text-center">15 Pasien</td>
-                  <td className="px-6 py-4">
-                    <Badge variant="active">Buka</Badge>
-                  </td>
-                  <td className="px-6 py-4 text-right flex justify-end gap-2">
-                    <button className="text-blue-600 hover:underline font-bold">Edit</button>
-                    <button className="text-red-600 hover:underline font-bold">Hapus</button>
+
+            <tbody>
+
+              {loadingSchedules ? (
+
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="text-center py-6"
+                  >
+                    Loading...
                   </td>
                 </tr>
-              ))}
+
+              ) : schedules.length > 0 ? (
+
+                schedules.map((schedule) => (
+
+                  <tr
+                    key={schedule.id}
+                    className="border-b"
+                  >
+
+                    <td className="px-6 py-4 font-semibold">
+                      {dayMap[schedule.day_of_week]}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {schedule.start_time}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {schedule.end_time}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {schedule.max_patients} Pasien
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <Badge
+                        variant={
+                          schedule.is_available
+                            ? 'active'
+                            : 'inactive'
+                        }
+                      >
+                        {schedule.is_available
+                          ? 'Buka'
+                          : 'Tutup'}
+                      </Badge>
+                    </td>
+
+                  </tr>
+
+                ))
+
+              ) : (
+
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="text-center py-6 text-gray-500"
+                  >
+                    Jadwal belum tersedia
+                  </td>
+                </tr>
+
+              )}
+
             </tbody>
+
           </table>
+
         </div>
+
       )}
 
-      {/* Add doctor modal */}
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -132,77 +415,93 @@ const DoctorPage = () => {
           <>
             <button
               onClick={() => setShowAddModal(false)}
-              className="px-4 py-2 text-gray-500 font-semibold"
+              className="px-4 py-2 text-gray-500"
             >
               Batal
             </button>
-            <button className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold">
+
+            <button
+              onClick={handleStoreDoctor}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg"
+            >
               Simpan Dokter
             </button>
           </>
         }
       >
+
         <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <label className="block text-sm font-bold text-gray-700 mb-1">Nama Lengkap</label>
-            <input
-              type="text"
-              className="w-full px-4 py-2 rounded-lg border border-gray-200"
-              placeholder="Contoh: dr. Nama Lengkap Sp.M"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              className="w-full px-4 py-2 rounded-lg border border-gray-200"
-              placeholder="email@rsmata.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
-              defaultValue="rsmata123"
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-gray-50"
-              readOnly
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Spesialisasi</label>
-            <select className="w-full px-4 py-2 rounded-lg border border-gray-200">
-              <option>Glaukoma</option>
-              <option>Retina</option>
-              <option>Kornea</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">No. Lisensi (STR)</label>
-            <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-200" />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">
-              Pengalaman (Tahun)
-            </label>
-            <input
-              type="number"
-              className="w-full px-4 py-2 rounded-lg border border-gray-200"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Biaya Konsultasi</label>
-            <input
-              type="number"
-              className="w-full px-4 py-2 rounded-lg border border-gray-200"
-              placeholder="200000"
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm font-bold text-gray-700 mb-1">Bio Ringkas</label>
-            <textarea className="w-full px-4 py-2 rounded-lg border border-gray-200 h-24" />
-          </div>
+
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Nama"
+            className="border p-2 rounded"
+          />
+
+          <input
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="Email"
+            className="border p-2 rounded"
+          />
+
+          <input
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+            placeholder="Phone"
+            className="border p-2 rounded"
+          />
+
+          <input
+            name="license_number"
+            value={form.license_number}
+            onChange={handleChange}
+            placeholder="License Number"
+            className="border p-2 rounded"
+          />
+
+          <input
+            name="experience_years"
+            value={form.experience_years}
+            onChange={handleChange}
+            placeholder="Experience"
+            type="number"
+            className="border p-2 rounded"
+          />
+
+          <input
+            name="consultation_fee"
+            value={form.consultation_fee}
+            onChange={handleChange}
+            placeholder="Consultation Fee"
+            type="number"
+            className="border p-2 rounded"
+          />
+
+          <input
+            name="specialization_id"
+            value={form.specialization_id}
+            onChange={handleChange}
+            placeholder="Specialization ID"
+            className="border p-2 rounded"
+          />
+
+          <textarea
+            name="bio"
+            value={form.bio}
+            onChange={handleChange}
+            placeholder="Bio"
+            className="border p-2 rounded col-span-2"
+          />
+
         </div>
+
       </Modal>
+
     </div>
   );
 };

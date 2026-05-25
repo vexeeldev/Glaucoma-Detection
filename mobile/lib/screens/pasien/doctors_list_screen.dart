@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../models/doctor_model.dart';
-import '../../services/mock_data_service.dart';
-import 'book_appointment_screen.dart';
+import '../../providers/doctor_provider.dart';
+import 'doctor_detail_screen.dart';
 
 class DoctorsListScreen extends StatefulWidget {
   const DoctorsListScreen({super.key});
@@ -12,11 +14,11 @@ class DoctorsListScreen extends StatefulWidget {
 }
 
 class _DoctorsListScreenState extends State<DoctorsListScreen> {
-  final MockDataService _mockDataService = MockDataService();
-  List<DoctorModel> _doctors = [];
-  List<DoctorModel> _filteredDoctors = [];
   final TextEditingController _searchController = TextEditingController();
   String _selectedSpecialization = 'Semua';
+  bool _isLoading = true;
+  Map<int, bool> _availabilityStatus = {};
+  Set<int> _loadingDoctors = {}; // Untuk tracking loading per dokter
 
   @override
   void initState() {
@@ -25,30 +27,63 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
     _searchController.addListener(_filterDoctors);
   }
 
-  void _loadDoctors() {
+  Future<void> _loadDoctors() async {
+    final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+    await doctorProvider.loadDoctors();
+
+    // Cek availability untuk setiap dokter
+    await _checkAllDoctorsAvailability(doctorProvider);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _checkAllDoctorsAvailability(DoctorProvider provider) async {
+    final Map<int, bool> status = {};
+
+    for (var doctor in provider.doctors) {
+      // Tandai loading untuk dokter ini
+      setState(() {
+        _loadingDoctors.add(doctor.id);
+      });
+
+      final isAvailable = await provider.isDoctorAvailableToday(doctor.id);
+      status[doctor.id] = isAvailable;
+
+      // Hapus loading untuk dokter ini
+      setState(() {
+        _loadingDoctors.remove(doctor.id);
+      });
+    }
+
     setState(() {
-      _doctors = _mockDataService.getDoctors();
-      _filteredDoctors = _doctors;
+      _availabilityStatus = status;
     });
   }
 
   void _filterDoctors() {
-    String query = _searchController.text.toLowerCase();
-    setState(() {
-      _filteredDoctors = _doctors.where((doctor) {
-        bool matchesSearch = doctor.name.toLowerCase().contains(query) ||
-            doctor.specialization.toLowerCase().contains(query);
-        bool matchesSpecialization = _selectedSpecialization == 'Semua' ||
-            doctor.specialization.contains(_selectedSpecialization);
-        return matchesSearch && matchesSpecialization;
-      }).toList();
-    });
+    setState(() {});
   }
 
   List<String> get specializations {
-    Set<String> specs = {'Semua'};
-    specs.addAll(_doctors.map((d) => d.specialization).toSet());
-    return specs.toList();
+    final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+    return ['Semua', ...doctorProvider.specializations];
+  }
+
+  List<DoctorModel> get filteredDoctors {
+    final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+    String query = _searchController.text.toLowerCase();
+
+    return doctorProvider.doctors.where((doctor) {
+      bool matchesSearch = doctor.name.toLowerCase().contains(query) ||
+          doctor.specialization.toLowerCase().contains(query);
+      bool matchesSpecialization = _selectedSpecialization == 'Semua' ||
+          doctor.specialization == _selectedSpecialization;
+      return matchesSearch && matchesSpecialization;
+    }).toList();
   }
 
   @override
@@ -89,28 +124,35 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
                 const SizedBox(height: 12),
 
                 // Specialization Filter
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: specializations.map((spec) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(spec),
-                          selected: _selectedSpecialization == spec,
-                          onSelected: (selected) {
-                            setState(() {
-                              _selectedSpecialization = spec;
-                              _filterDoctors();
-                            });
-                          },
-                          backgroundColor: Colors.grey[100],
-                          selectedColor: const Color(0xFF4A90E2).withValues(alpha: 0.2),
-                          checkmarkColor: const Color(0xFF4A90E2),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                Consumer<DoctorProvider>(
+                  builder: (context, provider, child) {
+                    if (provider.specializations.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: specializations.map((spec) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(spec),
+                              selected: _selectedSpecialization == spec,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedSpecialization = spec;
+                                });
+                              },
+                              backgroundColor: Colors.grey[100],
+                              selectedColor: const Color(0xFF4A90E2).withValues(alpha: 0.2),
+                              checkmarkColor: const Color(0xFF4A90E2),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -118,7 +160,9 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
 
           // Doctors List
           Expanded(
-            child: _filteredDoctors.isEmpty
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredDoctors.isEmpty
                 ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -141,10 +185,12 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
             )
                 : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _filteredDoctors.length,
+              itemCount: filteredDoctors.length,
               itemBuilder: (context, index) {
-                final doctor = _filteredDoctors[index];
-                return _buildDoctorCard(doctor);
+                final doctor = filteredDoctors[index];
+                final isAvailableToday = _availabilityStatus[doctor.id] ?? false;
+                final isLoading = _loadingDoctors.contains(doctor.id);
+                return _buildDoctorCard(doctor, isAvailableToday, isLoading);
               },
             ),
           ),
@@ -153,7 +199,7 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
     );
   }
 
-  Widget _buildDoctorCard(DoctorModel doctor) {
+  Widget _buildDoctorCard(DoctorModel doctor, bool isAvailableToday, bool isLoading) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -172,10 +218,11 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: () {
+            // Navigasi ke detail dokter
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => BookAppointmentScreen(doctor: doctor),
+                builder: (_) => DoctorDetailScreen(doctorId: doctor.id),
               ),
             );
           },
@@ -194,11 +241,11 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
                         color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: doctor.photoUrl.isNotEmpty
+                      child: doctor.profilePhoto != null && doctor.profilePhoto!.isNotEmpty
                           ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          doctor.photoUrl,
+                        child: Image.network(
+                          doctor.profilePhoto!,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
@@ -239,47 +286,22 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                size: 14,
+                          if (doctor.experience != null)
+                            Text(
+                              'Pengalaman: ${doctor.experience}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
                                 color: Colors.grey[600],
                               ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  doctor.schedule,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (doctor.experience > 0) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.work_outline,
-                                  size: 14,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${doctor.experience} tahun pengalaman',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
                             ),
-                          ],
+                          if (doctor.consultationFee != null)
+                            Text(
+                              'Fee: Rp ${_formatCurrency(doctor.consultationFee!)}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -287,48 +309,73 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Quota and Status
+                // Status - Tersedia Hari Ini atau Tidak
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: doctor.isAvailable
-                            ? Colors.green.withValues(alpha: 0.1)
-                            : Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: doctor.isAvailable ? Colors.green : Colors.red,
-                              shape: BoxShape.circle,
+                    if (isLoading)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isAvailableToday
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: isAvailableToday ? Colors.green : Colors.red,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            doctor.isAvailable ? 'Tersedia' : 'Penuh',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: doctor.isAvailable ? Colors.green : Colors.red,
-                              fontWeight: FontWeight.w500,
+                            const SizedBox(width: 4),
+                            Text(
+                              isAvailableToday ? 'Tersedia Hari Ini' : 'Tidak Tersedia Hari Ini',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: isAvailableToday ? Colors.green : Colors.red,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Kuota: ${doctor.availableQuota} pasien',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+
+                    // Tombol Lihat Detail
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DoctorDetailScreen(doctorId: doctor.id),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF4A90E2),
+                      ),
+                      child: const Text(
+                        'Lihat Detail',
+                        style: TextStyle(fontSize: 12),
                       ),
                     ),
                   ],
@@ -339,5 +386,14 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
         ),
       ),
     );
+  }
+
+  String _formatCurrency(String amount) {
+    try {
+      final number = double.parse(amount);
+      return NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(number);
+    } catch (e) {
+      return amount;
+    }
   }
 }

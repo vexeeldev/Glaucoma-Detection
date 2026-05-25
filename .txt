@@ -1,0 +1,43 @@
+{
+    "status": "success",
+    "message": "Daftar janji temu berhasil diambil",
+    "data": [
+        {
+            "id": 31,
+            "patient_name": "Malakul Kabir",
+            "appointment_date": "2026-04-15",
+            "status": "confirmed",
+            "result_label": "Siap Analisis"
+        },
+        {
+            "id": 46,
+            "patient_name": "Sholeh",
+            "appointment_date": "2026-04-15",
+            "status": "confirmed",
+            "result_label": "Siap Analisis"
+        },
+        {
+            "id": 32,
+            "patient_name": "Qonita",
+            "appointment_date": "2026-04-15",
+            "status": "completed",
+            "result_label": "Selesai"
+        },
+        {
+            "id": 39,
+            "patient_name": "Qonita",
+            "appointment_date": "2026-04-15",
+            "status": "completed",
+            "result_label": "Selesai"
+        },
+        {
+            "id": 49,
+            "patient_name": "Sholeh",
+            "appointment_date": "2026-04-15",
+            "status": "confirmed",
+            "result_label": "Siap Analisis"
+        }
+    ]
+}
+
+http://127.0.0.1:8000/api/mobile/doctor/appointments
