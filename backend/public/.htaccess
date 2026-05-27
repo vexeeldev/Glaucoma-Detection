@@ -1,5 +1,7 @@
 <IfModule mod_headers.c>
     Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization, ngrok-skip-browser-warning"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
 </IfModule>
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>

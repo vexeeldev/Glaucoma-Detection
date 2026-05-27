@@ -40,7 +40,7 @@ const UserPage = () => {
       setLoading(true);
 
       const response = await axios.get(
-        'http://localhost:8000/api/admin/management/users',
+        'http://localhost:8000/api/labs/management/users',
         {
           params: {
             search,
@@ -83,7 +83,7 @@ const UserPage = () => {
     try {
 
       await axios.patch(
-        `http://localhost:8000/api/admin/management/users/${id}/status`,
+        `http://localhost:8000/api/labs/management/users/${id}/status`,
         {},
         {
           headers: {
@@ -109,7 +109,7 @@ const UserPage = () => {
     try {
 
       await axios.delete(
-        `http://localhost:8000/api/admin/management/users/${id}`,
+        `http://localhost:8000/api/labs/management/users/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

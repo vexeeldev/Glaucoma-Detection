@@ -16,6 +16,7 @@ import Layout from './labs/components/Layout';
 import Dashboard from './labs/pages/Dashboard';
 import Examination from './labs/pages/Examination';
 import History from './labs/pages/History';
+import Landing from './landing';
 
 // Komponen Proteksi Route
 const ProtectedRoute = ({ isLoggedIn, children }) => {
@@ -48,6 +49,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Landing />} />
         {/* HALAMAN LOGIN */}
         <Route
           path="/login"

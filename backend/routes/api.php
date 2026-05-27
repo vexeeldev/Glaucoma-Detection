@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Mobile\patient\{DoctorController, BookingController, PaymentController, NotificationController}; 
 use App\Http\Controllers\Mobile\patient\{DashboardPatientController, ProfilePatientController, ForgotPasswordController};
 use App\Http\Controllers\Mobile\doctor\{DoctorAppointmentController};
-use App\Http\Controllers\Admin\{AdminDashboardController, ManagementUserController, ManagementDoctorController};
+use App\Http\Controllers\Admin\{AdminDashboardController, ManagementUserController, ManagementDoctorController, AppointmentPageController};
 
 /*
 |--------------------------------------------------------------------------
@@ -56,30 +56,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'getDashboardData']);
 
-  Route::prefix('management')->group(function () {
-
-    Route::prefix('users')->group(function () {
-        Route::get('/', [ManagementUserController::class, 'index']);
-        Route::get('/{id}', [ManagementUserController::class, 'show']);
-        Route::patch('/{id}/status', [ManagementUserController::class, 'updateStatus']);
-        Route::delete('/{id}', [ManagementUserController::class, 'destroy']);
-    });
-
-    Route::prefix('doctors')->group(function () {
-         Route::get('/', [ManagementDoctorController::class, 'index']);
-         Route::post('/', [ManagementDoctorController::class, 'store']);
-        Route::get('/{id}', [ManagementDoctorController::class, 'show']);
-        Route::put('/{id}', [ManagementDoctorController::class, 'update']);
-        Route::patch('/{id}/status', [ManagementDoctorController::class, 'updateStatus']);
-        Route::delete('/{id}', [ManagementDoctorController::class, 'destroy']);
-        Route::get('/{doctorId}/schedules', [ManagementDoctorController::class, 'schedules']);
-        Route::post('/{doctorId}/schedules', [ManagementDoctorController::class, 'storeSchedule']);
-        Route::patch('/schedules/{scheduleId}', [ManagementDoctorController::class, 'updateSchedule']);
-        Route::delete('/schedules/{scheduleId}', [ManagementDoctorController::class, 'destroySchedule']);
-    });
-
-});
-
+        
     });
 });
 
@@ -124,11 +101,22 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/clear', [NotificationController::class, 'clearAll']);
             Route::delete('/{id}', [NotificationController::class, 'destroy']);
         });
+        //API BARU
+        Route::get('/booking/{id}/queue', [BookingController::class, 'getQueueStatus']); 
 
+
+        //API BARU
         // 5. Modul Medical Records (Hasil Diagnosa AI untuk Pasien)
         Route::get('/medical-records', [ExaminationController::class, 'patientHistory']);
         Route::get('/medical-records/{id}', [ExaminationController::class, 'patientHistoryDetail']);
+        
     });
+
+    // Endpoint untuk Dashboard Dokter (Detail Lengkap)
+    Route::get('labs/examination/{appointment_id}/result', [ExaminationController::class, 'getLabResultForDoctor']);
+
+    // Endpoint untuk Aplikasi Flutter Pasien (Simpel & Informatif)
+    Route::get('patient/examination/{appointment_id}/result', [ExaminationController::class, 'getLabResultForPatient']);
 
     Route::get('mobile/patient/booking', [BookingController::class, 'index']);
     Route::get('mobile/doctor/booking', [BookingController::class, 'index']);
@@ -150,8 +138,39 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
         Route::get('/history', [ExaminationController::class, 'history']);
         Route::get('/examination-detail/{id}', [ExaminationController::class, 'getDetail']);
+        Route::post('/examination/{id}/result', [ExaminationController::class, 'storeLabResult']); // BARU
         Route::post('/examination-complete/{id}', [ExaminationController::class, 'updateStatus']);
         Route::post('/logout', [LogoutLabsController::class, 'logout']);
+
+        Route::prefix('appointments')->group(function () {
+        Route::get('/', [AppointmentPageController::class, 'index']);
+        Route::get('/{id}', [AppointmentPageController::class, 'show']);
+        });
+
+        Route::prefix('management')->group(function () {
+
+            Route::prefix('users')->group(function () {
+                Route::get('/', [ManagementUserController::class, 'index']);
+                Route::get('/{id}', [ManagementUserController::class, 'show']);
+                Route::patch('/{id}/status', [ManagementUserController::class, 'updateStatus']);
+                Route::delete('/{id}', [ManagementUserController::class, 'destroy']);
+            });
+
+            Route::prefix('doctors')->group(function () {
+                Route::get('/', [ManagementDoctorController::class, 'index']);
+                Route::post('/', [ManagementDoctorController::class, 'store']);
+                Route::get('/{id}', [ManagementDoctorController::class, 'show']);
+                Route::put('/{id}', [ManagementDoctorController::class, 'update']);
+                Route::patch('/{id}/status', [ManagementDoctorController::class, 'updateStatus']);
+                Route::delete('/{id}', [ManagementDoctorController::class, 'destroy']);
+                Route::get('/{doctorId}/schedules', [ManagementDoctorController::class, 'schedules']);
+                Route::post('/{doctorId}/schedules', [ManagementDoctorController::class, 'storeSchedule']);
+                Route::patch('/schedules/{scheduleId}', [ManagementDoctorController::class, 'updateSchedule']);
+                Route::delete('/schedules/{scheduleId}', [ManagementDoctorController::class, 'destroySchedule']);
+            });
+
+        });
+        
     });
 
     // --- COMMON LOGOUT ---

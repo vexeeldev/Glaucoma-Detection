@@ -5,7 +5,36 @@ import { Plus } from 'lucide-react';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
 
+const API_URL = 'http://127.0.0.1:8000/api';
+
+const initialForm = {
+  name: '',
+  email: '',
+  phone: '',
+  password: 'rsmata123',
+  specialization_id: '',
+  license_number: '',
+  experience_years: '',
+  consultation_fee: '',
+  bio: '',
+};
+
+const dayMap = {
+  monday: 'Senin',
+  tuesday: 'Selasa',
+  wednesday: 'Rabu',
+  thursday: 'Kamis',
+  friday: 'Jumat',
+  saturday: 'Sabtu',
+  sunday: 'Minggu',
+};
+
 const DoctorPage = () => {
+  const headers = {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+    Accept: 'application/json',
+  };
+
   const [tab, setTab] = useState('list');
 
   const [doctors, setDoctors] = useState([]);
@@ -17,37 +46,26 @@ const DoctorPage = () => {
   const [loadingSchedules, setLoadingSchedules] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: 'rsmata123',
-    specialization_id: '',
-    license_number: '',
-    experience_years: '',
-    consultation_fee: '',
-    bio: '',
-  });
+  const [editDoctorId, setEditDoctorId] = useState(null);
 
-  const API_URL = 'http://127.0.0.1:8000/api';
+  // ✅ FORM TERPISAH
+  const [addForm, setAddForm] = useState(initialForm);
+  const [editForm, setEditForm] = useState(initialForm);
 
-  const headers = {
-    Authorization: `Bearer ${localStorage.getItem('token')}`,
-    Accept: 'application/json',
-  };
+  // FETCH DATA
 
   const fetchDoctors = async () => {
     try {
       setLoadingDoctors(true);
 
       const response = await axios.get(
-        `${API_URL}/admin/management/doctors`,
+        `${API_URL}/labs/management/doctors`,
         { headers }
       );
 
-      setDoctors(response.data.data);
-
+      setDoctors(response.data.data || []);
     } catch (error) {
       console.log(error);
     } finally {
@@ -60,12 +78,11 @@ const DoctorPage = () => {
       setLoadingSchedules(true);
 
       const response = await axios.get(
-        `${API_URL}/admin/management/doctors/${doctorId}/schedules`,
+        `${API_URL}/labs/management/doctors/${doctorId}/schedules`,
         { headers }
       );
 
-      setSchedules(response.data.data);
-
+      setSchedules(response.data.data || []);
     } catch (error) {
       console.log(error);
     } finally {
@@ -73,12 +90,37 @@ const DoctorPage = () => {
     }
   };
 
+  // HANDLE CHANGE
+
+  const handleAddChange = (e) => {
+    setAddForm({
+      ...addForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleEditChange = (e) => {
+    setEditForm({
+      ...editForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  // RESET FORM
+  const resetAddForm = () => {
+    setAddForm(initialForm);
+  };
+
+  const resetEditForm = () => {
+    setEditForm(initialForm);
+  };
+
+  // STORE
   const handleStoreDoctor = async () => {
     try {
-
       await axios.post(
-        `${API_URL}/admin/management/doctors`,
-        form,
+        `${API_URL}/labs/management/doctors`,
+        addForm,
         { headers }
       );
 
@@ -86,20 +128,9 @@ const DoctorPage = () => {
 
       setShowAddModal(false);
 
-      setForm({
-        name: '',
-        email: '',
-        phone: '',
-        password: 'rsmata123',
-        specialization_id: '',
-        license_number: '',
-        experience_years: '',
-        consultation_fee: '',
-        bio: '',
-      });
+      resetAddForm();
 
       fetchDoctors();
-
     } catch (error) {
       console.log(error);
 
@@ -110,6 +141,59 @@ const DoctorPage = () => {
     }
   };
 
+  // =========================================================
+  // EDIT
+  // =========================================================
+
+  const handleEditClick = (doctor) => {
+    setEditDoctorId(doctor.id);
+
+    setEditForm({
+      name: doctor.name || '',
+      email: doctor.email || '',
+      phone: doctor.phone || '',
+      password: '',
+      specialization_id: doctor.specialization_id || '',
+      license_number: doctor.license || '',
+      experience_years: doctor.experience_years || '',
+      consultation_fee: doctor.consultation_fee || '',
+      bio: doctor.bio || '',
+    });
+
+    setShowEditModal(true);
+  };
+
+  const handleUpdateDoctor = async () => {
+    try {
+      await axios.put(
+        `${API_URL}/labs/management/doctors/${editDoctorId}`,
+        editForm,
+        { headers }
+      );
+
+      alert('Dokter berhasil diupdate');
+
+      setShowEditModal(false);
+
+      resetEditForm();
+
+      setEditDoctorId(null);
+
+      fetchDoctors();
+    } catch (error) {
+      console.log(error);
+
+      alert(
+        error?.response?.data?.message ||
+        'Gagal update dokter'
+      );
+    }
+  };
+
+  // =========================================================
+  // DELETE
+  // =========================================================
+
   const handleDeleteDoctor = async (doctorId) => {
     const confirmDelete = confirm(
       'Yakin ingin menghapus dokter ini?'
@@ -118,16 +202,14 @@ const DoctorPage = () => {
     if (!confirmDelete) return;
 
     try {
-
       await axios.delete(
-        `${API_URL}/admin/management/doctors/${doctorId}`,
+        `${API_URL}/labs/management/doctors/${doctorId}`,
         { headers }
       );
 
       alert('Dokter berhasil dihapus');
 
       fetchDoctors();
-
     } catch (error) {
       console.log(error);
 
@@ -135,29 +217,28 @@ const DoctorPage = () => {
     }
   };
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const dayMap = {
-    monday: 'Senin',
-    tuesday: 'Selasa',
-    wednesday: 'Rabu',
-    thursday: 'Kamis',
-    friday: 'Jumat',
-    saturday: 'Sabtu',
-    sunday: 'Minggu',
-  };
+  // =========================================================
+  // EFFECT
+  // =========================================================
 
   useEffect(() => {
     fetchDoctors();
   }, []);
 
+  useEffect(() => {
+    if (tab === 'schedule' && selectedDoctor) {
+      fetchSchedules(selectedDoctor);
+    }
+  }, [tab, selectedDoctor]);
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
     <div className="space-y-6">
+
+      {/* TAB */}
 
       <div className="flex border-b border-gray-200">
         {['list', 'schedule'].map((t) => (
@@ -177,6 +258,8 @@ const DoctorPage = () => {
         ))}
       </div>
 
+      {/* LIST */}
+
       {tab === 'list' && (
         <div>
 
@@ -187,7 +270,10 @@ const DoctorPage = () => {
             </h3>
 
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                resetAddForm();
+                setShowAddModal(true);
+              }}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
             >
               <Plus size={20} />
@@ -236,9 +322,7 @@ const DoctorPage = () => {
 
                     <div className="flex justify-between">
                       <span>Biaya</span>
-                      <span className="font-bold">
-                        {doc.fee}
-                      </span>
+                      <span>{doc.fee}</span>
                     </div>
 
                   </div>
@@ -246,6 +330,7 @@ const DoctorPage = () => {
                   <div className="flex gap-2 mt-6">
 
                     <button
+                      onClick={() => handleEditClick(doc)}
                       className="flex-1 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
                     >
                       Edit
@@ -255,8 +340,6 @@ const DoctorPage = () => {
                       onClick={() => {
                         setSelectedDoctor(doc.id);
                         setTab('schedule');
-
-                        fetchSchedules(doc.id);
                       }}
                       className="flex-1 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
                     >
@@ -281,20 +364,17 @@ const DoctorPage = () => {
         </div>
       )}
 
-      {tab === 'schedule' && (
+      {/* SCHEDULE */}
 
+      {tab === 'schedule' && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
 
-          <div className="flex justify-between items-center mb-6">
+          <div className="mb-6">
 
             <select
               value={selectedDoctor}
               onChange={(e) => {
                 setSelectedDoctor(e.target.value);
-
-                if (e.target.value) {
-                  fetchSchedules(e.target.value);
-                }
               }}
               className="px-4 py-2 rounded-lg border border-gray-200 min-w-[300px] outline-none"
             >
@@ -333,7 +413,6 @@ const DoctorPage = () => {
             <tbody>
 
               {loadingSchedules ? (
-
                 <tr>
                   <td
                     colSpan="5"
@@ -342,7 +421,6 @@ const DoctorPage = () => {
                     Loading...
                   </td>
                 </tr>
-
               ) : schedules.length > 0 ? (
 
                 schedules.map((schedule) => (
@@ -369,6 +447,7 @@ const DoctorPage = () => {
                     </td>
 
                     <td className="px-6 py-4">
+
                       <Badge
                         variant={
                           schedule.is_available
@@ -380,6 +459,7 @@ const DoctorPage = () => {
                           ? 'Buka'
                           : 'Tutup'}
                       </Badge>
+
                     </td>
 
                   </tr>
@@ -387,7 +467,6 @@ const DoctorPage = () => {
                 ))
 
               ) : (
-
                 <tr>
                   <td
                     colSpan="5"
@@ -396,7 +475,6 @@ const DoctorPage = () => {
                     Jadwal belum tersedia
                   </td>
                 </tr>
-
               )}
 
             </tbody>
@@ -404,17 +482,24 @@ const DoctorPage = () => {
           </table>
 
         </div>
-
       )}
+
+      {/* ADD MODAL */}
 
       <Modal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false);
+          resetAddForm();
+        }}
         title="Tambah Dokter Baru"
         footer={
           <>
             <button
-              onClick={() => setShowAddModal(false)}
+              onClick={() => {
+                setShowAddModal(false);
+                resetAddForm();
+              }}
               className="px-4 py-2 text-gray-500"
             >
               Batal
@@ -430,75 +515,50 @@ const DoctorPage = () => {
         }
       >
 
-        <div className="grid grid-cols-2 gap-4">
+        <DoctorForm
+          form={addForm}
+          handleChange={handleAddChange}
+        />
 
-          <input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Nama"
-            className="border p-2 rounded"
-          />
+      </Modal>
 
-          <input
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="Email"
-            className="border p-2 rounded"
-          />
+      {/* EDIT MODAL */}
 
-          <input
-            name="phone"
-            value={form.phone}
-            onChange={handleChange}
-            placeholder="Phone"
-            className="border p-2 rounded"
-          />
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          resetEditForm();
+          setEditDoctorId(null);
+        }}
+        title="Edit Dokter"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setShowEditModal(false);
+                resetEditForm();
+                setEditDoctorId(null);
+              }}
+              className="px-4 py-2 text-gray-500"
+            >
+              Batal
+            </button>
 
-          <input
-            name="license_number"
-            value={form.license_number}
-            onChange={handleChange}
-            placeholder="License Number"
-            className="border p-2 rounded"
-          />
+            <button
+              onClick={handleUpdateDoctor}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg"
+            >
+              Update Dokter
+            </button>
+          </>
+        }
+      >
 
-          <input
-            name="experience_years"
-            value={form.experience_years}
-            onChange={handleChange}
-            placeholder="Experience"
-            type="number"
-            className="border p-2 rounded"
-          />
-
-          <input
-            name="consultation_fee"
-            value={form.consultation_fee}
-            onChange={handleChange}
-            placeholder="Consultation Fee"
-            type="number"
-            className="border p-2 rounded"
-          />
-
-          <input
-            name="specialization_id"
-            value={form.specialization_id}
-            onChange={handleChange}
-            placeholder="Specialization ID"
-            className="border p-2 rounded"
-          />
-
-          <textarea
-            name="bio"
-            value={form.bio}
-            onChange={handleChange}
-            placeholder="Bio"
-            className="border p-2 rounded col-span-2"
-          />
-
-        </div>
+        <DoctorForm
+          form={editForm}
+          handleChange={handleEditChange}
+        />
 
       </Modal>
 
@@ -506,4 +566,81 @@ const DoctorPage = () => {
   );
 };
 
-export default DoctorPage;
+const DoctorForm = ({
+  form,
+  handleChange,
+}) => {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+
+      <input
+        name="name"
+        value={form.name}
+        onChange={handleChange}
+        placeholder="Nama"
+        className="border p-2 rounded"
+      />
+
+      <input
+        name="email"
+        value={form.email}
+        onChange={handleChange}
+        placeholder="Email"
+        className="border p-2 rounded"
+      />
+
+      <input
+        name="phone"
+        value={form.phone}
+        onChange={handleChange}
+        placeholder="Phone"
+        className="border p-2 rounded"
+      />
+
+      <input
+        name="license_number"
+        value={form.license_number}
+        onChange={handleChange}
+        placeholder="License Number"
+        className="border p-2 rounded"
+      />
+
+      <input
+        name="experience_years"
+        value={form.experience_years}
+        onChange={handleChange}
+        placeholder="Experience"
+        type="number"
+        className="border p-2 rounded"
+      />
+
+      <input
+        name="consultation_fee"
+        value={form.consultation_fee}
+        onChange={handleChange}
+        placeholder="Consultation Fee"
+        type="number"
+        className="border p-2 rounded"
+      />
+
+      <input
+        name="specialization_id"
+        value={form.specialization_id}
+        onChange={handleChange}
+        placeholder="Specialization ID"
+        className="border p-2 rounded"
+      />
+
+      <textarea
+        name="bio"
+        value={form.bio}
+        onChange={handleChange}
+        placeholder="Bio"
+        className="border p-2 rounded col-span-2"
+      />
+
+    </div>
+  );
+};
+
+export default DoctorPage;  

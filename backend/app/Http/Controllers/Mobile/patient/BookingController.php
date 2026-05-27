@@ -208,4 +208,84 @@ class BookingController extends Controller
             ]);
         });
     }
+
+    public function getQueueStatus($appointment_id)
+    {
+        try {
+            // 1. Ambil data janji temu pasien saat ini
+            $currentAppointment = DB::table('appointments')
+                ->where('id', $appointment_id)
+                ->first();
+
+            if (!$currentAppointment) {
+                return response()->json(['message' => 'Janji temu tidak ditemukan'], 404);
+            }
+
+            // Jika statusnya belum bayar, belum punya nomor antrean
+            if ($currentAppointment->appointment_status === 'pending_payment') {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Silakan selesaikan pembayaran untuk mendapatkan nomor antrean.'
+                ]);
+            }
+
+            $date = $currentAppointment->appointment_date;
+            $doctorId = $currentAppointment->doctor_id;
+
+            // 2. HITUNG NOMOR ANTREAN USER
+            // Menghitung berapa banyak janji temu yang sah (confirmed/completed/glaukoma/normal) 
+            // pada hari itu sebelum atau sama dengan waktu booking milik pasien ini
+            $userQueueNumber = DB::table('appointments')
+                ->where('doctor_id', $doctorId)
+                ->where('appointment_date', $date)
+                ->whereNotIn('appointment_status', ['pending_payment', 'cancelled', 'rejected'])
+                ->where('created_at', '<=', $currentAppointment->created_at)
+                ->count();
+
+            // 3. HITUNG ANTREAN YANG SEDANG DIPERIKSA (NOW SERVING)
+            // Kita cari pasien yang berstatus 'confirmed' (sedang menunggu/diperiksa di lab) yang paling pertama/paling awal pada hari itu
+            $currentServingAppointment = DB::table('appointments')
+                ->where('doctor_id', $doctorId)
+                ->where('appointment_date', $date)
+                ->where('appointment_status', 'confirmed')
+                ->orderBy('created_at', 'asc')
+                ->first();
+
+            // Jika tidak ada yang 'confirmed' lagi pada hari itu, artinya antrean hari itu sudah selesai semua atau belum mulai
+            if ($currentServingAppointment) {
+                // Hitung nomor antrean untuk pasien yang sedang dilayani tersebut
+                $nowServingNumber = DB::table('appointments')
+                    ->where('doctor_id', $doctorId)
+                    ->where('appointment_date', $date)
+                    ->whereNotIn('appointment_status', ['pending_payment', 'cancelled', 'rejected'])
+                    ->where('created_at', '<=', $currentServingAppointment->created_at)
+                    ->count();
+            } else {
+                // Jika tidak ada status 'confirmed', bisa jadi sedang kosong atau semua sudah 'completed'
+                $nowServingNumber = DB::table('appointments')
+                    ->where('doctor_id', $doctorId)
+                    ->where('appointment_date', $date)
+                    ->whereIn('appointment_status', ['glaukoma', 'normal', 'completed'])
+                    ->count();
+            }
+
+            // 4. HITUNG SISA ANTREAN (Berapa orang lagi sebelum giliran user)
+            $remainingQueue = $userQueueNumber - $nowServingNumber;
+            if ($remainingQueue < 0) $remainingQueue = 0; // Proteksi jika user sudah selesai diperiksa
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'appointment_id'     => $currentAppointment->id,
+                    'user_queue_number'  => $userQueueNumber,  // Nomor Antrean Saya
+                    'current_serving'    => $nowServingNumber,   // Antrean yang Sekarang Diperiksa
+                    'remaining_queue'    => $remainingQueue,    // Sisa Antrean Sebelum Saya
+                    'status_pasien'      => $currentAppointment->appointment_status
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
 }

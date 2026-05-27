@@ -1,19 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from '../../utils/axios'; 
 import {
   ArrowLeft, ChevronRight, CheckCircle, AlertCircle, Clock,
   Calendar, User, Info, FileText, Upload, Search, Download,
-  Eye, Loader2,
+  Eye,
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { COLORS } from '../data/constants';
 
+// --- TUNNEL NGROK PUBLIK: Biar sinkron dan bisa diakses online oleh Flutter mobile ---
+const BASE_STORAGE_URL = 'https://mollusklike-intactly-kennedi.ngrok-free.dev/storage/';
+
 const Examination = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const appointmentId = searchParams.get('appointment_id');
+  const location = useLocation();
+
+  const appointmentId = location.state?.appointmentId;
 
   const [examStep, setExamStep] = useState(1);
   const [mlLoading, setMlLoading] = useState(false);
@@ -25,19 +30,27 @@ const Examination = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [apiData, setApiData] = useState(null); 
+  
+  // Mengunci pilihan default ke 'Kanan' (Sesuai validasi in:Kiri,Kanan,Keduanya)
+  const [selectedEyeSide, setSelectedEyeSide] = useState('Kanan');
 
-  // 1. Ambil detail pasien berdasarkan ID dari URL
+  // 1. Ambil detail pasien berdasarkan ID
   useEffect(() => {
-  const fetchPatientDetail = async () => {
-    if (!appointmentId) return;
-    try {
-      const response = await axios.get(`/labs/examination-detail/${appointmentId}`);
-      setPatient(response.data);
-    } catch (error) {
-      console.error("Gagal mengambil data pasien:", error);
-    } finally {
-      setLoadingPatient(false);
-    }
+    const fetchPatientDetail = async () => {
+      if (!appointmentId) return;
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`labs/examination-detail/${appointmentId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setPatient(response.data);
+      } catch (error) {
+        console.error("Gagal mengambil data pasien:", error.response?.data || error.message);
+      } finally {
+        setLoadingPatient(false);
+      }
     };
 
     fetchPatientDetail();
@@ -60,16 +73,19 @@ const Examination = () => {
 
     const formData = new FormData();
     formData.append('image', selectedFile);
-    formData.append('appointment_id', appointmentId); // Pakai ID dinamis
+    formData.append('appointment_id', appointmentId); 
 
-   const handleAnalysis = async () => {
     try {
+      const token = localStorage.getItem('token');
       const interval = setInterval(() => {
         setUploadProgress(prev => (prev < 90 ? prev + 5 : prev));
       }, 150);
 
-      // Kirim formData langsung ke Axios
-      const response = await axios.post('/ml/check-glaucoma', formData);
+      const response = await axios.post('ml/check-glaucoma', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
 
       clearInterval(interval);
 
@@ -80,30 +96,52 @@ const Examination = () => {
         alert("Gagal: " + (response.data.message || "Server Error"));
         setExamStep(2);
       }
-      } catch (error) {
-        alert("Koneksi gagal.");
-        setExamStep(2);
-      } finally {
-        setMlLoading(false);
-      }
-    };
+    } catch (error) {
+      console.error(error);
+      alert("Koneksi ke server AI gagal.");
+      setExamStep(2);
+    } finally {
+      setMlLoading(false);
+    }
   };
 
-  // 2. Fungsi Selesaikan & Balik ke Dashboard
   const handleFinish = async () => {
+    if (!apiData) return alert("Data analisis AI tidak ditemukan.");
+
     try {
-      await axios.post(`/labs/examination-complete/${appointmentId}`);
-      navigate('/labs/dashboard');
+      const token = localStorage.getItem('token');
+      const finalData = new FormData();
+      const isGlaucoma = apiData?.analysis?.is_glaucoma;
+      
+      finalData.append('prediction', isGlaucoma ? 'GLAUKOMA' : 'NORMAL');
+      finalData.append('confidence_score', (apiData.confidence_score * 100).toFixed(1));
+      
+      // Kirim format 'Kiri', 'Kanan' atau 'Keduanya' agar aman melewati validasi Laravel 422
+      finalData.append('eye_side', selectedEyeSide); 
+      finalData.append('medical_advice', apiData.medical_advice || 'Tetap jaga kondisi kesehatan mata.');
+      finalData.append('image', selectedFile); 
+
+      const response = await axios.post(`labs/examination/${appointmentId}/result`, finalData, {
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.data.status === 'success') {
+        alert("Seluruh rekam medis dan data antrean berhasil diperbarui!");
+        navigate('/labs/dashboard');
+      }
     } catch (error) {
       console.error("Gagal update status:", error.response?.data?.message || error.message);
+      alert("Gagal menyimpan hasil pemeriksaan ke database.");
     }
   };
 
   // Logic Tampilan Dinamis (Real dari API)
   const rawScore = apiData ? apiData.confidence_score : 0;
-  const isGlaucoma = apiData?.analysis.is_glaucoma;
+  const isGlaucoma = apiData?.analysis?.is_glaucoma;
   const resultLabel = isGlaucoma ? 'GLAUKOMA' : 'NORMAL';
-  const confidence = apiData ? (apiData.confidence_score * 100) : 0;
   const glaucomaValue = isGlaucoma ? (rawScore * 100) : (rawScore * 100);
   const normalValue = 100 - glaucomaValue;
 
@@ -112,8 +150,8 @@ const Examination = () => {
     { name: 'Glaukoma', value: glaucomaValue },
   ];
   const displayConfidence = isGlaucoma 
-  ? (rawScore * 100) 
-  : (1 - rawScore) * 100;
+    ? (rawScore * 100) 
+    : (1 - rawScore) * 100;
 
   if (loadingPatient) return <div className="p-20 text-center font-bold text-blue-600 animate-pulse">Menghubungkan ke Ruang Periksa...</div>;
 
@@ -153,7 +191,7 @@ const Examination = () => {
         ))}
       </div>
 
-      {/* Step 1: Info Pasien (Dinamis) */}
+      {/* Step 1: Info Pasien */}
       {examStep === 1 && (
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
@@ -182,7 +220,7 @@ const Examination = () => {
                     <Calendar size={18} className="text-blue-500" /> Jadwal: {patient?.date}
                   </div>
                   <div className="flex items-center gap-3 text-sm font-medium text-gray-700">
-                    <Clock size={18} className="text-blue-500" /> Jam: {patient?.date}
+                    <Clock size={18} className="text-blue-500" /> Jam: {patient?.time}
                   </div>
                   <div className="flex items-center gap-3 text-sm font-medium text-gray-700">
                     <User size={18} className="text-blue-500" /> Pemeriksa: {patient?.doctor}
@@ -205,6 +243,7 @@ const Examination = () => {
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setExamStep(2)}
             className="w-full py-4 bg-[#1565C0] text-white rounded-2xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.99] transition-all flex items-center justify-center gap-3"
           >
@@ -213,7 +252,7 @@ const Examination = () => {
         </div>
       )}
 
-      {/* Step 2: Upload (UI Utuh) */}
+      {/* Step 2: Upload */}
       {examStep === 2 && (
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
           <div className="mb-10 text-center">
@@ -243,7 +282,16 @@ const Examination = () => {
                 <label className="block text-sm font-bold text-gray-700 mb-3">Sisi Mata</label>
                 <div className="grid grid-cols-3 gap-3">
                   {['Kiri', 'Kanan', 'Keduanya'].map((opt) => (
-                    <button key={opt} className={`py-3 px-4 rounded-xl text-sm font-semibold border-2 transition-all ${opt === 'Kiri' ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-gray-100 text-gray-500'}`}>
+                    <button 
+                      type="button" 
+                      key={opt} 
+                      onClick={() => setSelectedEyeSide(opt)}
+                      className={`py-3 px-4 rounded-xl text-sm font-semibold border-2 transition-all ${
+                        selectedEyeSide === opt 
+                          ? 'border-blue-600 bg-blue-50 text-blue-600' 
+                          : 'border-gray-100 text-gray-500'
+                      }`}
+                    >
                       {opt}
                     </button>
                   ))}
@@ -273,6 +321,7 @@ const Examination = () => {
           )}
 
           <button
+            type="button"
             onClick={handleUpload}
             disabled={!selectedFile || (uploadProgress > 0 && uploadProgress < 100)}
             className="w-full py-4 bg-[#1565C0] text-white rounded-2xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.99] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
@@ -282,7 +331,7 @@ const Examination = () => {
         </div>
       )}
 
-      {/* Step 3: Hasil (UI Utuh - Recharts) */}
+      {/* Step 3: Hasil */}
       {examStep === 3 && (
         <div className="animate-in fade-in zoom-in-95 duration-700">
           {mlLoading ? (
@@ -332,15 +381,15 @@ const Examination = () => {
                       ></div>
                     </div>
                     {apiData && (
-                        <div className="p-5 bg-blue-50/50 border-l-[6px] border-blue-600 rounded-r-2xl text-gray-700 text-sm italic font-medium leading-relaxed">
-                            "{apiData.medical_advice}"
-                        </div>
+                      <div className="p-5 bg-blue-50/50 border-l-[6px] border-blue-600 rounded-r-2xl text-gray-700 text-sm italic font-medium leading-relaxed">
+                        "{apiData.medical_advice}"
+                      </div>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-8 border-t border-gray-50">
-                  {/* Pie Chart (Recharts) */}
+                  {/* Pie Chart */}
                   <div className="text-center">
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center justify-center gap-2">
                       <Info size={16} className="text-blue-500" /> Analisis Probabilitas
@@ -359,21 +408,34 @@ const Examination = () => {
                     </div>
                   </div>
 
-                  {/* Visualisasi (Eye) */}
+                  {/* Visualisasi (Dinamis via Ngrok) */}
                   <div className="text-center">
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center justify-center gap-2">
                       <Eye size={16} className="text-blue-500" /> Layer Pemrosesan AI
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
+                      {/* Original Image */}
                       <div className="space-y-3">
                         <div className="aspect-square bg-gray-50 rounded-3xl overflow-hidden border-4 border-white shadow-md">
-                          <img src={previewUrl} className="object-cover w-full h-full" alt="Input" />
+                          <img 
+                            src={apiData?.file_path ? `${BASE_STORAGE_URL}${apiData.file_path}` : previewUrl} 
+                            className="object-cover w-full h-full" 
+                            alt="Original Fundus" 
+                            onError={(e) => { e.target.src = previewUrl; }}
+                          />
                         </div>
                         <p className="text-[9px] font-black text-gray-400 uppercase">Original</p>
                       </div>
+                      
+                      {/* Heatmap Image */}
                       <div className="space-y-3">
                         <div className="aspect-square bg-gray-50 rounded-3xl overflow-hidden border-4 border-white shadow-md relative">
-                          <img src={previewUrl} className="object-cover w-full h-full opacity-50 grayscale" alt="Heatmap" />
+                          <img 
+                            src={apiData?.file_path ? `${BASE_STORAGE_URL}${apiData.file_path}` : previewUrl} 
+                            className="object-cover w-full h-full opacity-50 grayscale" 
+                            alt="Heatmap Fundus" 
+                            onError={(e) => { e.target.src = previewUrl; }}
+                          />
                           <div className={`absolute inset-0 ${isGlaucoma ? 'bg-red-500/30' : 'bg-blue-500/20'} mix-blend-overlay`}></div>
                         </div>
                         <p className="text-[9px] font-black text-gray-400 uppercase">Heatmap</p>
@@ -385,12 +447,13 @@ const Examination = () => {
 
               {/* Action Buttons */}
               <div className="flex gap-4">
-                <button className="flex-1 py-4 bg-white border-2 border-gray-200 rounded-2xl font-black text-[10px] uppercase tracking-widest text-gray-500 hover:bg-gray-50 transition-all active:scale-95 shadow-sm flex items-center justify-center gap-2">
+                <button type="button" className="flex-1 py-4 bg-white border-2 border-gray-200 rounded-2xl font-black text-[10px] uppercase tracking-widest text-gray-500 hover:bg-gray-50 transition-all active:scale-95 shadow-sm flex items-center justify-center gap-2">
                   <Download size={20} /> Download PDF
                 </button>
                 <button 
-                   onClick={handleFinish} 
-                   className="flex-[2] py-4 bg-green-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-green-700 active:scale-[0.99] transition-all flex items-center justify-center gap-3"
+                  type="button"
+                  onClick={handleFinish} 
+                  className="flex-[2] py-4 bg-green-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-green-700 active:scale-[0.99] transition-all flex items-center justify-center gap-3"
                 >
                   Selesaikan & Simpan Medis <ChevronRight size={20} />
                 </button>

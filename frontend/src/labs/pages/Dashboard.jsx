@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ChevronRight, Info, Loader2, MoreVertical, 
   Users, Activity, AlertCircle, Target, 
-  ArrowUpRight, ArrowDownRight, Clock
+  Clock
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import axios from '../../utils/axios';
@@ -21,16 +21,21 @@ const Dashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // --- FIX BUG: Menambahkan Token Authorization & Perbaikan URL Axios ---
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/labs/dashboard')
+        const token = localStorage.getItem('token');
+        const response = await axios.get('labs/dashboard', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         if (response.data) {
           setData(response.data);
         }
-      
       } catch (error) {
-        console.error("Gagal load dashboard:", error);
+        console.error("Gagal load dashboard:", error.response?.data || error.message);
       } finally {
         setLoading(false);
       }
@@ -69,7 +74,6 @@ const Dashboard = () => {
               key={i} 
               title={stat.label} 
               value={stat.value} 
-              // Kirim sebagai Elemen JSX
               icon={<IconComponent size={24} />} 
               trend={stat.trend} 
             />
@@ -85,7 +89,7 @@ const Dashboard = () => {
               <div className="flex items-center gap-3">
                 <h2 className="font-bold text-gray-900">Pasien Siap Diperiksa</h2>
                 <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">
-                  {data?.ready_to_exam.length} Antrian
+                  {data?.ready_to_exam?.length || 0} Antrian
                 </span>
               </div>
               <button className="text-[#1565C0] text-sm font-bold hover:underline">Lihat Semua</button>
@@ -102,7 +106,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {data?.ready_to_exam.length > 0 ? (
+                  {data?.ready_to_exam?.length > 0 ? (
                     data.ready_to_exam.map((pasien) => (
                       <tr key={pasien.id} className="hover:bg-blue-50/30 transition-all group">
                         <td className="px-6 py-5">
@@ -121,7 +125,9 @@ const Dashboard = () => {
                         </td>
                         <td className="px-6 py-5 text-right">
                           <button
-                            onClick={() => navigate(`/labs/pemeriksaan?appointment_id=${pasien.id}`)}
+                            type="button"
+                            /* --- FIX BUG: Mengirim id lewat state navigasi agar tidak hilang saat pindah halaman --- */
+                            onClick={() => navigate('/labs/pemeriksaan', { state: { appointmentId: pasien.id } })}
                             className="bg-[#1565C0] text-white px-5 py-2.5 rounded-2xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 ml-auto"
                           >
                             Periksa <ChevronRight size={14} />
@@ -148,7 +154,7 @@ const Dashboard = () => {
           <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
             <h2 className="font-bold text-gray-900 mb-6">Sedang Diproses ML</h2>
             <div className="space-y-4">
-              {data?.processing.length > 0 ? (
+              {data?.processing?.length > 0 ? (
                 data.processing.map((item, i) => (
                   <div key={i} className="flex items-center gap-4 p-4 rounded-3xl bg-gray-50 border border-gray-100">
                     <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-[#1565C0]">
@@ -179,10 +185,11 @@ const Dashboard = () => {
               Pastikan kualitas gambar fundus optimal (pencahayaan merata) untuk mendapatkan akurasi AI di atas 95%.
             </p>
             <button
+              type="button"
               onClick={() => {
                 window.location.href = "https://www.apollohospitals.com/id/diagnostics-investigations/fundus-photography";
               }}
-             className="w-full py-4 bg-white text-[#1565C0] rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-all shadow-md">
+              className="w-full py-4 bg-white text-[#1565C0] rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-all shadow-md">
               Lihat Panduan
             </button>
           </div>
