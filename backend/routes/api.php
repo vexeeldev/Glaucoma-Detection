@@ -8,8 +8,8 @@ use App\Http\Controllers\Mobile\{LoginController, LogoutController, RegisterCont
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Mobile\patient\{DoctorController, BookingController, PaymentController, NotificationController}; 
-use App\Http\Controllers\Mobile\patient\{DashboardPatientController, ProfilePatientController, ForgotPasswordController};
-use App\Http\Controllers\Mobile\doctor\{DoctorAppointmentController};
+use App\Http\Controllers\Mobile\patient\{PatientExaminationController,DashboardPatientController, ProfilePatientController, ForgotPasswordController};
+use App\Http\Controllers\Mobile\doctor\{DoctorAppointmentController, DoctorExaminationController};
 use App\Http\Controllers\Admin\{AdminDashboardController, ManagementUserController, ManagementDoctorController, AppointmentPageController};
 
 /*
@@ -64,6 +64,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // --- ROLE: PATIENT (Mobile) ---
     Route::prefix('mobile/patient')->group(function () {
+
+        Route::get('/examination/queue-status', [PatientExaminationController::class, 'getPatientQueueStatus']); // API BARU untuk cek status antrean pasien di aplikasi mobile
         
         //buat dashboard dan profile patient di aplikasi mobile
         Route::get('/dashboard', [DashboardPatientController::class, 'index']);
@@ -123,6 +125,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- ROLE: DOCTOR (Mobile) ---
     Route::prefix('mobile/doctor')->group(function () {
+        Route::get('/dashboard', [DoctorExaminationController::class, 'getMobileDoctorDashboard']);
+        Route::get('/history', [DoctorExaminationController::class, 'getMobileDoctorHistory']);
         Route::get('/appointments', [DoctorAppointmentController::class, 'index']);
         Route::get('/appointments/{id}', [DoctorAppointmentController::class, 'show']);
         Route::prefix('booking')->group(function () {
