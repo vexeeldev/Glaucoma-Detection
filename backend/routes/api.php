@@ -54,6 +54,7 @@ Route::get('/proxy-image', function (Illuminate\Http\Request $request) {
 Route::middleware(['auth:sanctum'])->group(function () {
     // Group khusus Admin
     Route::prefix('admin')->group(function () {
+        Route::get('/appointment', [AppointmentPageController::class, 'index']);
         Route::get('/dashboard', [AdminDashboardController::class, 'getDashboardData']);
 
         
@@ -65,7 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- ROLE: PATIENT (Mobile) ---
     Route::prefix('mobile/patient')->group(function () {
 
-        Route::get('/examination/queue-status', [PatientExaminationController::class, 'getPatientQueueStatus']); // API BARU untuk cek status antrean pasien di aplikasi mobile
+        Route::get('/notification/queque', [PatientExaminationController::class, 'getPatientQueueStatus']); // API BARU untuk cek status antrean pasien di aplikasi mobile
         
         //buat dashboard dan profile patient di aplikasi mobile
         Route::get('/dashboard', [DashboardPatientController::class, 'index']);

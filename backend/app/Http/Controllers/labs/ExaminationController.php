@@ -303,13 +303,18 @@ class ExaminationController extends Controller
                 'updated_at'        => now()
             ]);
 
+            $dbConfidenceScore = (float) $request->confidence_score;
+            if ($dbConfidenceScore > 1.0) {
+                $dbConfidenceScore = $dbConfidenceScore / 100;
+            }
+
             // 4. Insert Baru ke tabel analysis_results (Menggunakan dbPrediction yang sudah steril)
             \Illuminate\Support\Facades\DB::table('analysis_results')->insert([
                 'examination_id'   => $examinationId,
                 'fundus_image_id'  => $fundusImageId, 
                 'model_version_id' => 1, 
                 'prediction'       => $dbPrediction, // ← DIJAMIN AMAN: String 'normal' atau 'glaucoma'
-                'confidence_score' => $request->confidence_score, 
+                'confidence_score' => $dbConfidenceScore, 
                 'status'           => 'completed', 
                 'created_at'       => now(),
                 'updated_at'       => now()

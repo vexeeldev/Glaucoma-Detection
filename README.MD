@@ -18,12 +18,12 @@ Sebelum melakukan instalasi, pastikan laptopmu (khususnya pengguna Ubuntu/Debian
 
 ## 📂 Arsitektur Folder
 
-| Folder | Tech Stack | Fungsi |
-| :--- | :--- | :--- |
-| `backend/` | Laravel 11, PostgreSQL | Pusat data, API Auth, & Manajemen Pasien |
-| `frontend/` | React, Vite, Tailwind | Dashboard Admin/Dokter untuk cek hasil deteksi |
-| `mobile/` | Flutter | Aplikasi Pasien untuk scan mata mandiri |
-| `ai-service/` | Flask, TensorFlow/OpenCV | Engine AI yang memproses klasifikasi glaukoma |
+| Folder        | Tech Stack               | Fungsi                                         |
+| :------------ | :----------------------- | :--------------------------------------------- |
+| `backend/`    | Laravel 11, PostgreSQL   | Pusat data, API Auth, & Manajemen Pasien       |
+| `frontend/`   | React, Vite, Tailwind    | Dashboard Admin/Dokter untuk cek hasil deteksi |
+| `mobile/`     | Flutter                  | Aplikasi Pasien untuk scan mata mandiri        |
+| `ai-service/` | Flask, TensorFlow/OpenCV | Engine AI yang memproses klasifikasi glaukoma  |
 
 ---
 
@@ -91,26 +91,25 @@ flutter run
 
 ## ⚠️ Troubleshooting (Kendala Umum)
 
-| Masalah | Solusi |
-| :--- | :--- |
-| **Error PostgreSQL di Laravel** | Install driver: `sudo apt install php8.3-pgsql` |
-| **Error CORS di React** | Cek `backend/config/cors.php`, pastikan `'allowed_origins' => ['http://localhost:5173']` |
-| **Python Library Error (OpenCV)** | Jalankan: `sudo apt install libgl1-mesa-glx` |
-| **Git Submodule (folder abu-abu di GitHub)** | Hapus folder `.git` di dalam sub-folder, lalu push ulang |
+| Masalah                                      | Solusi                                                                                   |
+| :------------------------------------------- | :--------------------------------------------------------------------------------------- |
+| **Error PostgreSQL di Laravel**              | Install driver: `sudo apt install php8.3-pgsql`                                          |
+| **Error CORS di React**                      | Cek `backend/config/cors.php`, pastikan `'allowed_origins' => ['http://localhost:5173']` |
+| **Python Library Error (OpenCV)**            | Jalankan: `sudo apt install libgl1-mesa-glx`                                             |
+| **Git Submodule (folder abu-abu di GitHub)** | Hapus folder `.git` di dalam sub-folder, lalu push ulang                                 |
 
 ---
 
 ## 🤝 Kontributor
 
-| Nama | GitHub | Peran |
-| :--- | :--- | :--- |
-| Malakul Kabir Ar Rabbani | [@vexeeldev](https://github.com/vexeeldev) | Project Leader |
-| Ahmad Syauqi Al-Farisi | [@Syauqi-men](https://github.com/Syauqi-men) | - |
-| Ahmad Fikri Ramadhan | [@AhmadFikri17](https://github.com/AhmadFikri17)  | - |
+| Nama                     | GitHub                                           | Peran          |
+| :----------------------- | :----------------------------------------------- | :------------- |
+| Malakul Kabir Ar Rabbani | [@vexeeldev](https://github.com/vexeeldev)       | Project Leader |
+| Ahmad Syauqi Al-Farisi   | [@Syauqi-men](https://github.com/Syauqi-men)     | -              |
+| Ahmad Fikri Ramadhan     | [@AhmadFikri17](https://github.com/AhmadFikri17) | -              |
 
 ---
 
 <p align="center">
   Glaucoma Detection Project — PENS PSDKU Lamongan 2026 🎓
 </p>
-
