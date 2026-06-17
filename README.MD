@@ -2,6 +2,11 @@
 
 Sistem deteksi dini glaukoma menggunakan Deep Learning. Project ini mengintegrasikan Backend Laravel, Frontend React, Mobile Flutter, dan AI Service Flask ke dalam satu ekosistem terpadu.
 
+### DEMO APLIKASI GLAUCOSCAN
+
+[Klik di sini untuk melihat Demo Aplikasi GlaucoScan](https://drive.google.com/drive/folders/1jm3GLdhL2otjukEVXM0V6OSjK4dB6SJe)
+
+
 ---
 
 ## 🛠️ Persyaratan Sistem (Prerequisites)
