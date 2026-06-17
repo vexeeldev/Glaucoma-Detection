@@ -4,6 +4,14 @@ Sistem deteksi dini glaukoma menggunakan Deep Learning. Project ini mengintegras
 
 ---
 
+### DEMO APLIKASI GLAUCOSCAN
+
+[Klik di sini untuk melihat Demo Aplikasi GlaucoScan](https://drive.google.com/drive/folders/1jm3GLdhL2otjukEVXM0V6OSjK4dB6SJe)
+
+---
+
+---
+
 ## 🛠️ Persyaratan Sistem (Prerequisites)
 
 Sebelum melakukan instalasi, pastikan laptopmu (khususnya pengguna Ubuntu/Debian) sudah terpasang:
